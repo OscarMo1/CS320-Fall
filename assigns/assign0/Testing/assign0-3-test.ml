@@ -7,6 +7,7 @@ let () = assert(int2str(10) = "10")
 let () = assert(int2str(100) = "100")
 let () = assert(int2str(1000) = "1000")
 let () = assert(int2str(12345) = "12345")
+let () = assert(int2str(-12345) = "-12345")
 
 (* ****** ****** *)
 let () =
