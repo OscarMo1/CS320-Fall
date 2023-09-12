@@ -17,8 +17,7 @@ let concat (s1: string) (s2: string): string =
       if x = 0 then
         s
       else
-        let d = x mod 10 in
-        let s1 = str(chr(48 + d)) in
+        let s1 = str(chr(48 + (x mod 10))) in
         loop (x / 10) (concat s1 s)
     in
     if i0 = 0 then
