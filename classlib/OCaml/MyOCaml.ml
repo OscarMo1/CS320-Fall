@@ -91,7 +91,7 @@ type
 ('xs, 'x0, 'y0) map_list =
 'xs -> ('x0 -> 'y0) -> 'y0 list
 type
-('xs, 'x0, 'y0) maprev_list =
+('xs, 'x0, 'y0) map_rlist =
 'xs -> ('x0 -> 'y0) -> 'y0 list
 
 type
@@ -222,8 +222,10 @@ list_forall
 (test: 'a -> bool): bool =
 (
 match xs with
-  [] -> true
-| x1 :: xs -> test(x1) && list_forall(xs)(test))
+| [] -> true
+| x1 :: xs ->
+(
+  test(x1) && list_forall(xs)(test)))
 
 let rec
 list_exists
@@ -231,8 +233,10 @@ list_exists
 (test: 'a -> bool): bool =
 (
 match xs with
-  [] -> false
-| x1 :: xs -> test(x1) || list_exists(xs)(test))
+| [] -> false
+| x1 :: xs ->
+(
+  test(x1) || list_exists(xs)(test)))
 
 (* ****** ****** *)
 
@@ -242,9 +246,19 @@ list_foreach
 (work: 'a -> unit): unit =
 (
 match xs with
-  [] -> ()
-| x1 :: xs -> (work(x1); list_foreach(xs)(work)))
+| [] -> ()
+| x1 :: xs ->
+(
+  work(x1); list_foreach(xs)(work)))
 ;;
+
+let rec
+list_rforeach
+(xs: 'a list)
+(work: 'a -> unit): unit =
+list_foreach(list_reverse(xs))(work)
+;;
+
 (* ****** ****** *)
 (* ****** ****** *)
 (* ****** ****** *)
@@ -299,20 +313,20 @@ foreach_to_map_list
 : ('xs, 'x0, 'y0) map_list =
 fun(xs)(fopr) ->
 list_reverse
-(foreach_to_maprev_list(foreach)(xs)(fopr))
+(foreach_to_map_rlist(foreach)(xs)(fopr))
 
 and
-foreach_to_maprev_list
+foreach_to_map_rlist
 ( foreach
 : ('xs, 'x0) foreach)
-: ('xs, 'x0, 'y0) maprev_list =
+: ('xs, 'x0, 'y0) map_rlist =
 fun
 (xs)(fopr) ->
 let
 res = ref([]) in
 foreach(xs)
 (fun(x0) -> res := fopr(x0) :: !res); !res
-;;(* end of [foreach_to_maprev_list]: let *)
+;;(* end of [foreach_to_map_rlist]: let *)
 
 (* ****** ****** *)
 
@@ -330,7 +344,7 @@ foreach_to_rlistize
 : ('xs, 'x0) foreach
 ) : ('xs, 'x0) rlistize =
 fun(xs) ->
-foreach_to_maprev_list(foreach)(xs)(fun x -> x)
+foreach_to_map_rlist(foreach)(xs)(fun x -> x)
 
 (* ****** ****** *)
 
@@ -419,6 +433,9 @@ let
 int1_foldleft(n0) =
 foreach_to_foldleft(int1_foreach)(n0)
 let
+list_foldleft(xs) =
+foreach_to_foldleft(list_foreach)(xs)
+let
 string_foldleft(cs) =
 foreach_to_foldleft(string_foreach)(cs)
 ;;
@@ -426,9 +443,26 @@ let
 int1_foldright(n0) =
 rforeach_to_foldright(int1_rforeach)(n0)
 let
+list_foldright(xs) =
+rforeach_to_foldright(list_rforeach)(xs)
+let
 string_foldright(cs) =
 rforeach_to_foldright(string_rforeach)(cs)
 ;;
+
+(* ****** ****** *)
+
+(*
+let
+foreach_to_foldright
+( foreach
+: ('xs, 'x0) foreach)
+: 'xs -> 'r0 -> ('x0 -> 'r0 -> 'r0) -> 'r0 =
+fun xs r0 fopr ->
+let xs =
+foreach_to_rlistize(foreach)(xs) in
+  list_foldleft(xs)(r0)(fun r0 x0 -> fopr x0 r0)
+*)
 
 (* ****** ****** *)
 (* ****** ****** *)
