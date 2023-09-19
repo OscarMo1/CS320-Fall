@@ -8,7 +8,7 @@
 let rec num_length(x: int): int = 
   if x < 10 then 1 else 1 + num_length(x/10)
 
-(*int2str function converts int to a string*)
+
 let int2str(i0: int): string =
   (*get_digit returns the individual digit at specified index of number*)
   let rec get_digit(x: int): int =
