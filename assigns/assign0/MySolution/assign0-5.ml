@@ -3,7 +3,7 @@
 #use "./../assign0.ml";;
 
 (* ****** ****** *)
-
+(*anonymous function used to iterate backwards of the string to create the reverse of string*)
 let stringrev(cs: string): string = 
   let length = string_length cs in
   string_init length 
