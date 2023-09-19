@@ -17,7 +17,13 @@
 *)
 
 let sort5: int*int*int*int*int -> int*int*int*int*int =
-  (* YOUR CODE *)
+  let swap(n0:int)(n1:int):=
+    if n0 > n1 then
+      let temp = n0 in
+      let n0 = n1 in
+      let n1 = temp in
+    else int1_forall(n)(swap)
+
 
 
 (* ************************************************ *)
