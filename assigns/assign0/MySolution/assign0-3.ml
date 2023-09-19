@@ -12,18 +12,20 @@ let concat (s1: string) (s2: string): string =
   ) in
   s;;
 
-  let int2str i0 =
+  let int2str(i0: int): string =
     if i0 = 0 then
-      "0"
+        "0"
     else
-      let rec loop x s =
-        if x = 0 then
-          s
-        else
-          let s1 = str(chr(48 + (x mod 10))) in
-          loop (x / 10) (concat s1 s)
+        let rec loop x s = 
+            if x = 0 then
+                s
+            else
+                let d = x mod 10 in 
+                let c = chr(48 + d) in
+                let s1 = str(c) in
+                loop (x / 10) (concat s1 s)
         in
-      if i0 < 0 then
-        concat "-" (loop (-i0) "")
-      else
-        loop i0 "";;
+        if i0 < 0 then
+            concat "-" (loop (-i0) "")
+        else
+            loop i0 "";;
