@@ -1,5 +1,5 @@
 (* ****** ****** *)
-#use "./../MySolution/assign1-5.ml";;
+#use "./../../../classlib/OCaml/MyOCaml.ml"
 (* ****** ****** *)
 
 let rec string_longest_ascend(cs: string): string =

@@ -1,5 +1,5 @@
 (* ****** ****** *)
-#use "./../MySolution/assign1-4.ml";;
+#use "./../../../classlib/OCaml/MyOCaml.ml"
 (* ****** ****** *)
 let rec intrep_add(ds1: string)(ds2: string): string =
   let len1 = string_length ds1 in
