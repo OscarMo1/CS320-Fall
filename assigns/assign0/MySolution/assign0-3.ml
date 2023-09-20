@@ -26,8 +26,9 @@ let int2str(i0: int): string =
   
   let length = num_length (abs i0) in
   let isNeg = i0 < 0 in
-
+  (*create string with length based on length and isNeg*)
   string_init (length + (if isNeg then 1 else 0))
+  (* lambda function that calls index of the value of int and turns into string*)
   (fun i -> 
     if i = 0 && isNeg then '-'
     else

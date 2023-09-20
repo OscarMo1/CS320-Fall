@@ -2,28 +2,32 @@
 #use "./../../../classlib/OCaml/MyOCaml.ml"
 (* ****** ****** *)
 
-let rec string_longest_ascend(cs: string): string =
-  let len = string_length cs in
-
-  (* Helper function to find the longest ascending subsequence *)
-  let rec find_longest i current longest =
-    if i >= len then
-      longest
-    else
-      let current_char = string_get_at cs i in
-      match current with
-      | [] -> find_longest (i + 1) [current_char] [current_char]
-      | hd :: _ ->
-        if current_char <= hd then
-          find_longest (i + 1) (current_char :: current) (current_char :: longest)
-        else
-          find_longest (i + 1) [current_char] (if list_length current > list_length longest then current else longest)
-  in
-
-  let longest_sequence = find_longest 0 [] [] in
-
-  (* Convert the list to a string *)
-  string_concat_list (list_reverse longest_sequence)
+(* helper function to retrieve the last char in a str*)
+let last_char s = 
+  let l = string_length(s) in 
+  string_get_at s (l-1)
 ;;
+
+let string_longest_ascend(xs: string): string =
+  ( convert xs to a list )
+  let l = string_listize xs in
+  ( iterate over the list keeping track of a sequence and the longest sequence )
+  let rec loop (l: 'a list) (s: string) (ls: string): string =
+    match l with
+    ( check if s is > ls at the end )
+    | [] -> if string_length(s) > string_length(ls) then s else ls
+    | h :: t ->
+      ( if s != "" check lastchar(s) with the head char index )
+      if string_length(s) > 0 && last_char(s) <= h then
+        loop t (string_snoc s h) ls 
+      else
+        ( if lastchar(s) and head aren't in a sequence check if s > ls and set s to h )
+          if string_length(s) > string_length(ls) then
+            loop t (str(h)) s
+          else
+            loop t (str(h)) ls
+    in
+    loop l "" ""
+  ;;
 
 
