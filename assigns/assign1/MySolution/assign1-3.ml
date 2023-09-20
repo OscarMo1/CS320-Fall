@@ -1,9 +1,9 @@
 (* ****** ****** *)
-#use "./../MySolution/assign1-3.ml";;
+#use "./../../../classlib/OCaml/MyOCaml.ml"
 (* ****** ****** *)
 
 let rec string_has_132_like_subsequence(cs: string): bool =
-  let len = string_length(cs) in
+  let len = string_length cs in
   if len < 3 then false
   else
     let rec check_subsequence i =
