@@ -5,18 +5,28 @@
 (* ****** ****** *)
 
 (* recursive function that finds the number of digits in a number*)
-let rec num_length(x: int): int = 
-  if x < 10 then 1 else 1 + num_length(x/10)
+let num_length(x: int): int =
+  let rec num_length_helper(x: int)(count: int): int =
+    if x < 10 then count + 1
+    else num_length_helper (x / 10) (count + 1)
+  in
+  num_length_helper x 0
+;;
+
 
 
 let int2str(i0: int): string =
   (*get_digit returns the individual digit at specified index of number*)
-  let rec getDigit(x: int): int =
-    if x = 0 then 1 else 10 * getDigit (x-1)
+  let getDigit(x: int): int =
+  let rec getDigitHelper(x: int)(result: int): int =
+    if x = 0 then result
+    else getDigitHelper (x - 1) (result * 10)
   in
-
+  getDigitHelper x 1 in
+  
   let length = num_length (abs i0) in
   let isNeg = i0 < 0 in
+
   string_init (length + (if isNeg then 1 else 0))
   (fun i -> 
     if i = 0 && isNeg then '-'
