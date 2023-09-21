@@ -1,110 +1,6 @@
 (* ****** ****** *)
 (*
-  MyOCaml.ml###########################################################################
-#
-# MyPython.ml is a library
-# built for CS320, Fall, 2023
-#
-###########################################################################
-
-def int1_forall(n0, test_func):
-    i0 = 0
-    while(i0 < n0):
-        if not test_func(i0):
-            return False
-        i0 = (i0 + 1)
-    return True # test_func(i0)==True for all 0 <= i0 < n0
-
-def int1_foreach(n0, work_func):
-    i0 = 0
-    while(i0 < n0):
-        work_func(i0)
-        i0 = (i0 + 1)
-    return None # work_func(i0) is done for all 0 <= i0 < n0
-
-def int1_rforeach(n0, work_func):
-    i0 = 0
-    while(i0 < n0):
-        work_func(n0-1-i0)
-        i0 = (i0 + 1)
-    return None # work_func(i0) is done for all n0 > i0 >= 0
-
-def int1_map_fnlist(xs, fopr_func):
-    return foreach_to_map_fnlist(int1_foreach)(xs, fopr_func)
-def int1_map_pylist(xs, fopr_func):
-    return foreach_to_map_pylist(int1_foreach)(xs, fopr_func)
-
-def int1_foldleft(xs, r0, fopr_func):
-    return foreach_to_foldleft(int1_foreach)(xs, r0, fopr_func)
-def int1_foldright(xs, r0, fopr_func):
-    return rforeach_to_foldright(int1_rforeach)(xs, r0, fopr_func)
-
-###########################################################################
-
-# datatype 'a list =
-# nil | cons of ('a * 'a list)
-
-class fnlist:
-    ctag = -1
-    def get_ctag(self):
-        return self.ctag
-    def __iter__(self):
-        return fnlist_iter(self)
-    def __reversed__(self):
-        return fnlist_reverse(self)
-# end-of-class(fnlist)
-
-class fnlist_iter:
-    def __iter__(self):
-        return self
-    def __init__(self, itms):
-        self.itms = itms
-    def __next__(self):
-        if (self.itms.ctag==0):
-            raise StopIteration
-        else:
-            itm1 = self.itms.cons1
-            self.itms = self.itms.cons2
-            return itm1
-    # end-of-[__next__]
-
-###########################################################################
-
-class fnlist_nil(fnlist):
-    def __init__(self):
-        self.ctag = 0
-        return None
-# end-of-class(fnlist_nil)
-
-class fnlist_cons(fnlist):
-    def __init__(self, cons1, cons2):
-        self.ctag = 1
-        self.cons1 = cons1
-        self.cons2 = cons2
-        return None
-    def get_cons1(self):
-        return self.cons1
-    def get_cons2(self):
-        return self.cons2
-# end-of-class(fnlist_cons)
-
-####################################################
-def fnlist_sing(x0):
-    return fnlist_cons(x0, fnlist_nil())
-####################################################
-def fnlist_print(xs):
-    nx = 0
-    sep = "; "
-    print("[",end='')
-    while(xs.ctag > 0):
-        if (nx > 0):
-            print(sep,end='')        
-        print(xs.cons1,end='')
-        nx = nx + 1; xs = xs.cons2
-    print("]", end='')
-####################################################
-
-############### end of [CS320-2023-Fall-classlib-MyPython.py] ############### is a library
+  MyOCaml.ml is a library
  built for CS320, Fall, 2023
 *)
 (* ****** ****** *)
@@ -483,12 +379,13 @@ let list_rmake_fwork(fwork: ('x0 -> unit) -> unit): 'x0 list =
     let work(x0) = (res := (x0 :: !res)) in (fwork(work); !res)
 ;;
 
+(* ****** ****** *)
+
+(** **)
 let list_rmake_filter(test: 'x0 -> bool)(fwork: ('x0 -> unit) -> unit): 'x0 list =
   let res = ref([]) in
     let work(x0) = if test(x0) then (res := (x0 :: !res)) in (fwork(work); !res)
 ;;
-
-(* ****** ****** *)
 
 (** The result of the entire expression is a string that represents the characters processed by the fwork function **)
 let string_make_fwork(fwork: (char -> unit) -> unit): string =
@@ -503,8 +400,6 @@ let string_rmake_fwork(fwork: (char -> unit) -> unit): string =
     Array.of_list(list_rmake_fwork(fwork)) 
   in String.init (Array.length(xs)) (fun i -> xs.(i))
 ;;
-
-(* ****** ****** *)
 
 (** appends two lists together: [1;2;3] [4;5;6] = [1;2;3;4;5;6]**)
 let list_append(xs: 'a list)(ys: 'a list): 'a list =
