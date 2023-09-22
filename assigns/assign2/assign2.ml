@@ -109,7 +109,7 @@ type
 ('xs, 'x0) iforeach = 'xs -> (int -> 'x0 -> unit) -> unit
 
 type
-('xs, 'x0, 'r0) foldleft = 'xs -> ('r0 -> 'x0 -> 'r0) -> 'r0
+('xs, 'x0, 'r0) foldleft = 'xs -> 'r0 -> ('r0 -> 'x0 -> 'r0) -> 'r0
 
 (* ****** ****** *)
 
@@ -125,6 +125,16 @@ foldleft_to_iforeach
 *)
 
 (* ****** ****** *)
+let rec
+list_foldleft
+(xs: 'a list)
+(r0: 'r0)(fopr: 'r0 -> 'a -> 'r0): 'r0 =
+match xs with
+| [] -> r0
+| (x1 :: xs) ->
+  list_foldleft(xs)(fopr(r0)(x1))(fopr)
+;;
+(* ****** ****** *)
 
 (*
 //
@@ -135,6 +145,11 @@ string_sepjoin_list:
 let
 string_sepjoin_list
 (sep: string)(xs: string list): string = ...
+
+For instance,
+string_sepjoin_list(",")(["1","22","333"]) = "1,22,333"
+For instance,
+string_sepjoin_list(";;")(["11","22","33"]) = "11;;22;;33"
 *)
 
 (* ****** ****** *)
