@@ -19,11 +19,6 @@ let rec mylist_get_at(xs: 'a mylist)(i0: int): 'a =
       mylist_get_at(xs2, i0 - len_xs1)  (* The element is in the second sublist. *)
 ;;
 
-(* Example usage:
-let myList = MyCons(1, MyCons(2, MyCons(3, MyNil)))
-let element = mylist_get_at myList 1  (* This will be 2. *)
-*)
-
 
 
 
