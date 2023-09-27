@@ -1,11 +1,10 @@
 def fnlist_make_fwork(fwork):
-    result = []
-    
-    def work(x):
-        result.append(x)
-    
-    fwork(work)
-    return result
+    res = []
 
+    def work(x0):
+        res.append(x0)
+
+    fwork(work)
+    return list(reversed(res))
 
 
