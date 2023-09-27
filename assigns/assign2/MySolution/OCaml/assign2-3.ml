@@ -1,7 +1,4 @@
 #use "./../../assign2.ml";;
+#use "./../../../../classlib/OCaml/MyOCaml.ml"
 
-let foldleft_to_iforeach (foldleft: ('xs, 'x0, 'r0) foldleft): ('xs, 'x0) iforeach =
-  
-    ;;
 
-  

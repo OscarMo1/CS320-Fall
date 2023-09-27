@@ -1,4 +1,4 @@
-from MyPython.py import fnlist_nil, fnlist_cons, fnlist_reverse
+from MyPython import fnlist_nil, fnlist_cons, fnlist_reverse
 
 
 def fnlist_make_fwork(fwork):
