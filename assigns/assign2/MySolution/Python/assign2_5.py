@@ -1,4 +1,5 @@
-from MyPython import *
+from MyPython import fnlist_nil, fnlist_cons, fnlist_reverse
+
 
 def fnlist_make_fwork(fwork):
     res = fnlist_nil()
@@ -9,8 +10,4 @@ def fnlist_make_fwork(fwork):
     
     fwork(work)
     return fnlist_reverse(res)
-
-
-
-
 
