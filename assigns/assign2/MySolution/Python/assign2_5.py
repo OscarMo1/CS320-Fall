@@ -1,11 +1,16 @@
+from MyPython import *
+
 def fnlist_make_fwork(fwork):
-    result = []
+    res = fnlist_nil()
     
-    def work(x):
-        result.append(x)
+    def work(x0):
+        nonlocal res
+        res = fnlist_cons(x0, res)
     
     fwork(work)
-    return result
+    return fnlist_reverse(res)
+
+
 
 
 
