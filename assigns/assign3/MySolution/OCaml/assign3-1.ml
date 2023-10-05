@@ -1,21 +1,29 @@
 #use "./../../../../classlib/OCaml/MyOCaml.ml"
-let rec matrix_transpose (xss: 'a list list): 'a list list =
-  match xss with
+
+let head lst =
+  match lst with
+  | [] -> 0
+  | x :: _ -> x
+
+let tail lst =
+  match lst with
   | [] -> []
-  | [] :: _ -> []
-  | _ ->
-    let rec get_first_column xss =
-      match xss with
-      | [] -> []
-      | row :: rest -> List.hd row :: get_first_column rest
-    in
-    let rec get_rest_columns xss =
-      match xss with
-      | [] -> []
-      | row :: rest -> List.tl row :: get_rest_columns rest
-    in
-    List.append [get_first_column xss] (matrix_transpose (get_rest_columns xss))
-;;
+  | _ :: x -> x
+
+let rec matrix_foreach work lst =
+  match lst with
+  | [] -> []
+  | x :: xs -> (work x) :: (matrix_foreach work xs)
+
+let rec matrix_transpose(xss: 'a list list): 'a list list = 
+    match xss with
+    | [] -> []
+    | [] :: _ -> []
+    | _ ->
+      let col = matrix_foreach head xss in
+      let tail_matrix = matrix_foreach tail xss in
+      col :: matrix_transpose tail_matrix
+
 
 
 

@@ -12,9 +12,5 @@
   combinations n0 xs
 ;;
 
-let rec append_lists list1 list2 =
-  match list1 with
-  | [] -> list2
-  | hd :: tl -> hd :: append_lists tl list2
-;;
+
 
