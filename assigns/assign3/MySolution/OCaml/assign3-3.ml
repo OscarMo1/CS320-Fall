@@ -7,7 +7,7 @@
       | x :: xs' ->
         let with_x = List.map (fun subset -> x :: subset) (combinations (k - 1) xs') in
         let without_x = combinations k xs' in
-        append_lists with_x without_x
+        with_x @ without_x
   in
   combinations n0 xs
 ;;
