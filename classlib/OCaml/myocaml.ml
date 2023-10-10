@@ -6,7 +6,8 @@
 (* ****** ****** *)
 exception False;;
 (* ****** ****** *)
-
+exception Subscript;;
+(* ****** ****** *)
 
 (** Return the character with the given ASCII code. **)
 let chr = Char.chr;;
