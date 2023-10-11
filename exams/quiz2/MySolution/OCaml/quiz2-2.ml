@@ -11,4 +11,4 @@ What is the value of mystery3 ? Your answer:
 
 (* ************************************************ *)
 
-let mystery3 : int = (* YOUR ANSWER *)
+let mystery3 : int = 256

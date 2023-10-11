@@ -11,4 +11,4 @@ What is the value of mystery1 ? Your answer:
 
 (* ************************************************ *)
 
-let mystery1 : int = (* YOUR ANSWER *)
+let mystery1 : int = 10
