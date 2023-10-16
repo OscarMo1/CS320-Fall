@@ -1,23 +1,32 @@
 #use "./../../../../classlib/OCaml/MyOCaml.ml"
 
-type 'a gtree = Node of 'a * 'a gtree list
-type 'a stream = Stream of 'a * (unit -> 'a stream)
+type 'a stream = Cons of 'a * (unit -> 'a stream)
 
+type 'a gtree =
+  | GTnil
+  | GTcons of 'a * ('a gtree list)
+
+(* Depth-First Search Enumeration *)
 let rec gtree_streamize_dfs (xs: 'a gtree): 'a stream =
   match xs with
-  | Node (value, children) ->
-    Stream (value, fun () -> gtree_streamize_dfs_list children)
+  | GTnil -> failwith "Cannot streamize an empty tree."
+  | GTcons (value, children) ->
+    let rec children_stream children =
+      match children with
+      | [] -> fun () -> gtree_streamize_dfs GTnil (* Empty stream for no children *)
+      | child :: rest -> fun () -> Cons (gtree_streamize_dfs child, children_stream rest)
+    in
+    Cons (value, children_stream children)
 
-and gtree_streamize_dfs_list children () =
-  match children with
-  | [] -> raise Stream.Failure
-  | x :: xs -> try gtree_streamize_dfs x with Stream.Failure -> gtree_streamize_dfs_list xs ()
-
+(* Breadth-First Search Enumeration *)
 let rec gtree_streamize_bfs (xs: 'a gtree): 'a stream =
-  let rec enqueue_children queue = function
-    | [] -> queue
-    | Node (value, children) :: rest ->
-      Stream (value, fun () -> enqueue_children (queue @ children @ rest) [])
+  let rec bfs_queue queue =
+    match queue with
+    | [] -> fun () -> gtree_streamize_bfs GTnil (* Empty stream for an empty queue *)
+    | GTnil :: rest -> fun () -> bfs_queue rest ()
+    | GTcons (value, children) :: rest ->
+      fun () -> Cons (value, bfs_queue (rest @ children) ())
   in
-  enqueue_children [] [xs]
+  bfs_queue [xs] ()
+
 
