@@ -1,19 +1,17 @@
 #use "./../../../../classlib/OCaml/MyOCaml.ml"
 
+let rec series curVal sign n =
+  fun () ->
+    let nextVal = 1.0 /. n in
+    let nSum = 
+      if sign then 
+        curVal +. nextVal
+      else 
+        curVal -. nextVal
+    in
+    StrCons(nSum, series nSum (not sign) (n +. 1.0))
+;;
+
+let the_ln2_stream: float stream = series 0.0 true 1.0;;
 
 
-  let rec series sum sign x =
-    fun () ->
-      let next = 1.0 /. x in
-      (* finds next sum using appropriate sign *)
-      let nSum = 
-        if sign then 
-          sum +. next 
-        else 
-          sum -. next 
-      in
-      (* constructs the stream by calling series *)
-      StrCons(nSum, series nSum (not sign) (x +. 1.0))
-  ;;
-  
-  let the_ln2_stream: float stream = series 0.0 true 1.0;;
