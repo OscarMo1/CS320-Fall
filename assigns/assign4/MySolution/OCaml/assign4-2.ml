@@ -1,7 +1,17 @@
 #use "./../../../../classlib/OCaml/MyOCaml.ml"
 
-let rec nat_pairs_stream i j () =
-  StrCons((i, j), fun () -> nat_pairs_stream i (j + 1) ())
+let theNatPairs: (int * int) stream =
+  (* main call function *)
+  let rec pair x i j =
+    fun () ->
+      StrCons((i, j), next_pair x i j)
+  (* co-helper function *)
+  and next_pair x i j =
+  (* iterates all combinations that add to x, then moves to x+1 *)
+  if i = 0 then
+    pair (x+1) (x+1) 0
+  else
+    pair x (i-1) (j+1)
+  in
+  pair 0 0 0
 ;;
-
-let theNatPairs: (int * int) stream = nat_pairs_stream 0 0;;
