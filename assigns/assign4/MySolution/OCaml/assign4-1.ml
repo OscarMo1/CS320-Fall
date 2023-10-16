@@ -1,12 +1,19 @@
 #use "./../../../../classlib/OCaml/MyOCaml.ml"
 
 
-(* Function to create a stream of partial sums of the ln 2 series *)
-let the_ln2_stream: float stream =
-  let rec helper (n: int) (sign: float) (sum: float): float stream =
+
+  let rec series sum sign x =
     fun () ->
-      StrCons(sum, fun () -> helper (n + 1) (-.sign) (sum +. sign /. float_of_int (n + 1)) ())
-  in
-  helper 1 1. 1. (* start from the first term *)
-
-
+      let next = 1.0 /. x in
+      (* finds next sum using appropriate sign *)
+      let nSum = 
+        if sign then 
+          sum +. next 
+        else 
+          sum -. next 
+      in
+      (* constructs the stream by calling series *)
+      StrCons(nSum, series nSum (not sign) (x +. 1.0))
+  ;;
+  
+  let the_ln2_stream: float stream = series 0.0 true 1.0;;
