@@ -1,13 +1,14 @@
-def the_nat_pairs_cubesum():
-    def cubesum_gen():
-        i, j = 0, 0
-        while True:
-            cubesum_i = i ** 3
-            cubesum_j = j ** 3
-            if cubesum_i + cubesum_j < cubesum_gen():
-                yield (i, j)
-                i += 1
-            else:
-                j += 1
+def theNatPairs_cubesum():
+    def cube_sum(i, j):
+        return i**3 + j**3
 
-    return cubesum_gen()
+    i, j = 0, 0
+
+    while True:
+        yield (i, j)
+        if cube_sum(i + 1, j) < cube_sum(i, j + 1):
+            i += 1
+        else:
+            j += 1
+
+
