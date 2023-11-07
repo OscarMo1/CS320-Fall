@@ -46,57 +46,52 @@ let rec trim cs =
    parse "((mul 1 2)" = None
 
 *)
+let rec parse_expr (cs : char list) : expr option * char list =
+  match trim cs with
+  | ('0'..'9' as d) :: rest ->
+    let num, rest' = parse_num (d::rest) in
+    (Some (Int num), rest')
+  | '(' :: 'a' :: 'd' :: 'd' :: rest ->
+    let (exprs, rest') = parse_exprs rest in
+    (match exprs with
+      | [] -> (None, rest')
+      | _ -> (Some (Add exprs), rest'))
+  | '(' :: 'm' :: 'u' :: 'l' :: rest ->
+    let (exprs, rest') = parse_exprs rest in
+    (match exprs with
+      | [] -> (None, rest')
+      | _ -> (Some (Mul exprs), rest'))
+  | _ -> (None, cs)
 
-let is_digit c = Char.(c >= '0' && c <= '9')
-
-let rec parse_expr cs =
-  let rec parse_num acc cs =
-    match cs with
-    | [] -> (acc, [])
-    | ' ' :: rest -> parse_num acc (List.trim rest)
-    | '(' :: _ -> (acc, [])
-    | ')' :: _ -> (acc, [])
-    | c :: rest when is_digit c ->
-        let (digits, rest') = parse_digits (String.make 1 c) rest in
-        (Int (int_of_string digits), rest')
-    | _ -> (acc, cs)
-
-  and parse_digits acc cs =
-    match cs with
-    | [] -> (acc, [])
-    | c :: rest when is_digit c -> parse_digits (acc ^ (String.make 1 c)) rest
-    | _ -> (acc, cs)
-
-  and parse_exprs cs =
-    match cs with
-    | [] -> ([], cs)
-    | ' ' :: rest -> parse_exprs (List.trim rest)
-    | '(' :: op :: rest when op = 'a' || op = 'm' ->
+and parse_exprs (cs : char list) : expr list * char list =
+  match trim cs with
+  | ')' :: rest -> ([], rest)
+  | _ ->
+    let (expr, rest) = parse_expr cs in
+    (match expr with
+      | None -> ([], rest)
+      | Some e ->
         let (exprs, rest') = parse_exprs rest in
-        let closing_paren = if op = 'a' then ')' else ')' in
-        let op_expr = if op = 'a' then Add exprs else Mul exprs in
-        (op_expr, consume closing_paren rest')
+        (e :: exprs, rest'))
 
-    | _ -> parse_num cs
-
-  and consume expected cs =
-    match cs with
-    | [] -> []
-    | c :: rest when c = expected -> rest
-    | _ -> cs
-
-  in
-  let (expr, rest) = parse_exprs cs in
-  match expr with
-  | Int _ -> Some (expr, rest)
-  | Add _ | Mul _ -> None
-;;
+and parse_num (cs : char list) : int * char list =
+  match cs with
+  | [] -> (0, [])
+  | c :: rest ->
+    if '0' <= c && c <= '9' then
+      let num, rest' = parse_num rest in
+      (int_of_string (String.make 1 c) + num * 10, rest')
+    else
+      (0, cs)
 
 let parse (s : string) : expr option =
-  let cs = List.of_seq s in
-  let (expr, rest) = parse_expr (List.trim cs) in
-  match expr with
-  | Int _ -> Some expr
-  | Add _ | Mul _ -> None
+  let char_list = string_listize s in
+  let (expr, rest) = parse_expr char_list in
+  if List.length (trim rest) = 0 then
+    expr
+  else
+    None
 ;;
+
+let x = parse "(add 1 2 3)";;
 
