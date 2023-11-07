@@ -47,54 +47,56 @@ let rec trim cs =
 
 *)
 
-let is_digit c = c >= '0' && c <= '9'
+let is_digit c = Char.(c >= '0' && c <= '9')
 
-let rec parse_num cs =
-  match cs with
-  | [] -> None
-  | ' ' :: rest -> parse_num (trim rest)
-  | '(' :: _ -> None
-  | ')' :: _ -> None
-  | c :: rest when is_digit c ->
-    let (digits, rest') = parse_digits (String.make 1 c) rest in
-    Some (Int (int_of_string digits), rest')
-  | _ -> None
+let rec parse_expr cs =
+  let rec parse_num acc cs =
+    match cs with
+    | [] -> (acc, [])
+    | ' ' :: rest -> parse_num acc (List.trim rest)
+    | '(' :: _ -> (acc, [])
+    | ')' :: _ -> (acc, [])
+    | c :: rest when is_digit c ->
+        let (digits, rest') = parse_digits (String.make 1 c) rest in
+        (Int (int_of_string digits), rest')
+    | _ -> (acc, cs)
 
-and parse_digits acc cs =
-  match cs with
-  | [] -> (acc, [])
-  | c :: rest when is_digit c -> parse_digits (acc ^ (String.make 1 c)) rest
-  | _ -> (acc, cs)
+  and parse_digits acc cs =
+    match cs with
+    | [] -> (acc, [])
+    | c :: rest when is_digit c -> parse_digits (acc ^ (String.make 1 c)) rest
+    | _ -> (acc, cs)
 
-and parse_exprs cs =
-  match parse_expr cs with
-  | Some (expr, rest) ->
-    let (exprs, rest') = parse_exprs rest in
-    (expr :: exprs, rest')
-  | None -> ([], cs)
+  and parse_exprs cs =
+    match cs with
+    | [] -> ([], cs)
+    | ' ' :: rest -> parse_exprs (List.trim rest)
+    | '(' :: op :: rest when op = 'a' || op = 'm' ->
+        let (exprs, rest') = parse_exprs rest in
+        let closing_paren = if op = 'a' then ')' else ')' in
+        let op_expr = if op = 'a' then Add exprs else Mul exprs in
+        (op_expr, consume closing_paren rest')
 
-and parse_expr cs =
-  match cs with
-  | [] -> None
-  | ' ' :: rest -> parse_expr (trim rest)
-  | '(' :: 'a' :: 'd' :: 'd' :: ' ' :: rest ->
-    let (exprs, rest') = parse_exprs rest in
-    begin
-      match rest' with
-      | ')' :: rest'' -> Some (Add exprs, rest'')
-      | _ -> None
-    end
-  | '(' :: 'm' :: 'u' :: 'l' :: ' ' :: rest ->
-    let (exprs, rest') = parse_exprs rest in
-    begin
-      match rest' with
-      | ')' :: rest'' -> Some (Mul exprs, rest'')
-      | _ -> None
-    end
-  | _ -> parse_num cs
+    | _ -> parse_num cs
+
+  and consume expected cs =
+    match cs with
+    | [] -> []
+    | c :: rest when c = expected -> rest
+    | _ -> cs
+
+  in
+  let (expr, rest) = parse_exprs cs in
+  match expr with
+  | Int _ -> Some (expr, rest)
+  | Add _ | Mul _ -> None
+;;
 
 let parse (s : string) : expr option =
-  let cs = string_listize s in
-  match parse_expr (trim cs) with
-  | Some (expr, []) -> Some expr
-  | _ -> None
+  let cs = List.of_seq s in
+  let (expr, rest) = parse_expr (List.trim cs) in
+  match expr with
+  | Int _ -> Some expr
+  | Add _ | Mul _ -> None
+;;
+
