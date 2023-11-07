@@ -1,9 +1,9 @@
 1. 
-	
-	= <expr> + <expr>
-	= <expr > + <expr> * <expr>
-	= <expr > +  <expr> * <int>
-	= <expr > + <expr> * - <nat>
+<expr>	
+= <expr> * <expr>
+= <expr > + <expr> * <expr>
+= <expr > +  <expr> * <int>
+= <expr > + <expr> * - <nat>
 = <expr > +  <expr> * - <digit><nat>
 = <expr > + <expr> * - <digit><digit>
 = <expr > + <expr> * - <digit>7
@@ -20,7 +20,7 @@
 = 12 + 2 * - 07
 
 2.
-
+<stmt>
 = for ⟨id⟩ = ⟨expr ⟩ to ⟨expr ⟩ do ⟨stmt⟩
 = for <letter> = ⟨expr ⟩ to ⟨expr ⟩ do ⟨stmt⟩
 = for x = ⟨int⟩ to ⟨expr ⟩ do ⟨stmt⟩
