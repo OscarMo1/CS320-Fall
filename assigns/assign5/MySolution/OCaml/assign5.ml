@@ -52,45 +52,45 @@ let is_digit char = char >= '0' && char <= '9'
 
 let rec parse_exprs str =
   match parse_expr str with
-  | Some (expr, rest) ->
-    let (exprs, rest') = parse_exprs rest in
-    (expr :: exprs, rest')
+  | Some (expr, t) ->
+    let (exprs, t') = parse_exprs t in
+    (expr :: exprs, t')
   | None -> ([], str)
 
 and parse_expr str =
   match str with
   | [] -> None
-  | ' ' :: rest -> parse_expr (trim rest)
-  | '(' :: 'a' :: 'd' :: 'd' :: ' ' :: rest ->
-    let (exprs, rest') = parse_exprs rest in
+  | ' ' :: t -> parse_expr (trim t)
+  | '(' :: 'a' :: 'd' :: 'd' :: ' ' :: t ->
+    let (exprs, t') = parse_exprs t in
     begin
-      match rest' with
-      | ')' :: rest'' -> Some (Add exprs, rest'')
+      match t' with
+      | ')' :: t'' -> Some (Add exprs, t'')
       | _ -> None
     end
-  | '(' :: 'm' :: 'u' :: 'l' :: ' ' :: rest ->
-    let (exprs, rest') = parse_exprs rest in
+  | '(' :: 'm' :: 'u' :: 'l' :: ' ' :: t ->
+    let (exprs, t') = parse_exprs t in
     begin
-      match rest' with
-      | ')' :: rest'' -> Some (Mul exprs, rest'')
+      match t' with
+      | ')' :: t'' -> Some (Mul exprs, t'')
       | _ -> None
     end
   | _ -> parse_num str
 and parse_num str =
   match str with
   | [] -> None
-  | ' ' :: rest -> parse_num (trim rest)
+  | ' ' :: t -> parse_num (trim t)
   | '(' :: _ -> None
   | ')' :: _ -> None
-  | char :: rest when is_digit char ->
-    let (digits, rest') = parse_digits (String.make 1 char) rest in
-    Some (Int (int_of_string digits), rest')
+  | char :: t when is_digit char ->
+    let (digits, t') = parse_digits (String.make 1 char) t in
+    Some (Int (int_of_string digits), t')
   | _ -> None
 
 and parse_digits acc str =
   match str with
   | [] -> (acc, [])
-  | char :: rest when is_digit char -> parse_digits (acc ^ (String.make 1 char)) rest
+  | char :: t when is_digit char -> parse_digits (acc ^ (String.make 1 char)) t
   | _ -> (acc, str)
 
 
