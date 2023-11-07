@@ -46,6 +46,11 @@ let rec trim cs =
    parse "((mul 1 2)" = None
 
 *)
+type expr =
+  | Int of int
+  | Add of expr list
+  | Mul of expr list
+
 let is_digit c = c >= '0' && c <= '9'
 
 let rec parse_num acc cs =
