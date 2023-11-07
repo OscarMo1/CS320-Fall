@@ -47,3 +47,6 @@ let rec trim cs =
 
 *)
 let parse (s : string) : expr option = (* YOUR CODE *)
+  match parse_expr (string_listize s) with
+  | Some (expr, []) -> Some expr
+  | _ -> None
