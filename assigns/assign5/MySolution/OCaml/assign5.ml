@@ -46,7 +46,28 @@ let rec trim cs =
    parse "((mul 1 2)" = None
 
 *)
-let rec parse_expr (cs : char list) : expr option * char list =
+
+let is_digit c = c >= '0' && c <= '9'
+
+let rec parse_num cs =
+  match cs with
+  | [] -> None
+  | ' ' :: rest -> parse_num (trim rest)
+  | '(' :: _ -> None
+  | ')' :: _ -> None
+  | c :: rest when is_digit c ->
+    let (digits, rest') = parse_digits (String.make 1 c) rest in
+    Some (Int (int_of_string digits), rest')
+  | _ -> None
+
+and parse_digits acc cs =
+  match cs with
+  | [] -> (acc, [])
+  | c :: rest when is_digit c -> parse_digits (acc ^ (String.make 1 c)) rest
+  | _ -> (acc, cs)
+
+
+and parse_expr (cs : char list) : expr option * char list =
   match trim cs with
   | ('0'..'9' as d) :: rest ->
     let num, rest' = parse_num (d::rest) in
@@ -74,16 +95,6 @@ and parse_exprs (cs : char list) : expr list * char list =
         let (exprs, rest') = parse_exprs rest in
         (e :: exprs, rest'))
 
-and parse_num (cs : char list) : int * char list =
-  match cs with
-  | [] -> (0, [])
-  | c :: rest ->
-    if '0' <= c && c <= '9' then
-      let num, rest' = parse_num rest in
-      (int_of_string (String.make 1 c) + num * 10, rest')
-    else
-      (0, cs)
-
 let parse (s : string) : expr option =
   let char_list = string_listize s in
   let (expr, rest) = parse_expr char_list in
@@ -93,5 +104,4 @@ let parse (s : string) : expr option =
     None
 ;;
 
-let x = parse "(add 1 2 3)";;
 
