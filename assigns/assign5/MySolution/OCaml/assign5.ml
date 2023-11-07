@@ -49,24 +49,8 @@ let rec trim cs =
 
 let is_digit char = char >= '0' && char <= '9'
 
-let rec parse_num str =
-  match str with
-  | [] -> None
-  | ' ' :: rest -> parse_num (trim rest)
-  | '(' :: _ -> None
-  | ')' :: _ -> None
-  | char :: rest when is_digit char ->
-    let (digits, rest') = parse_digits (String.make 1 char) rest in
-    Some (Int (int_of_string digits), rest')
-  | _ -> None
 
-and parse_digits acc str =
-  match str with
-  | [] -> (acc, [])
-  | char :: rest when is_digit char -> parse_digits (acc ^ (String.make 1 char)) rest
-  | _ -> (acc, str)
-
-and parse_exprs str =
+let rec parse_exprs str =
   match parse_expr str with
   | Some (expr, rest) ->
     let (exprs, rest') = parse_exprs rest in
@@ -92,6 +76,24 @@ and parse_expr str =
       | _ -> None
     end
   | _ -> parse_num str
+and parse_num str =
+  match str with
+  | [] -> None
+  | ' ' :: rest -> parse_num (trim rest)
+  | '(' :: _ -> None
+  | ')' :: _ -> None
+  | char :: rest when is_digit char ->
+    let (digits, rest') = parse_digits (String.make 1 char) rest in
+    Some (Int (int_of_string digits), rest')
+  | _ -> None
+
+and parse_digits acc str =
+  match str with
+  | [] -> (acc, [])
+  | char :: rest when is_digit char -> parse_digits (acc ^ (String.make 1 char)) rest
+  | _ -> (acc, str)
+
+
 
 let parse (s : string) : expr option =
   let str = string_listize s in
