@@ -47,51 +47,52 @@ let rec trim cs =
 
 *)
 
-let rec parse_num (cs : char list) : (int * char list) option =
-  match cs with
-  | [] -> None
-  | '0' .. '9' as c :: rest ->
-      let digit = digit_of_char c in
-      let rec parse_digits acc rest =
-        match rest with
-        | [] -> (acc, [])
-        | '0' .. '9' as c :: rest ->
-            let digit = digit_of_char c in
-            parse_digits (acc * 10 + digit) rest
-        | _ -> (acc, rest)
-      in
-      let (num, rest) = parse_digits digit rest in
-      Some (num, rest)
-  | _ -> None
-
-let rec parse_expr (cs : char list) : (expr * char list) option =
-  match trim cs with
-  | '(' :: rest ->
-      let (op, rest') =
-        match trim rest with
-        | "add" :: rest' -> (Add, rest')
-        | "mul" :: rest' -> (Mul, rest')
-        | _ -> (fun _ -> Int 0, rest) (* Default to Int 0 if not add or mul *)
-      in
-      parse_exprs op rest'
-  | '0' .. '9' :: _ ->
-      match parse_num cs with
-      | Some (num, rest) -> (Int num, rest)
-      | None -> None
-  | _ -> None
-
-and parse_exprs (op : expr list -> expr) (cs : char list) : (expr * char list) option =
-  match trim cs with
-  | ')' :: rest -> Some (op [], rest)
+let rec parse_expr (tokens : char list) : expr option * char list =
+  match trim tokens with
+  | '(' :: 'a' :: 'd' :: 'd' :: rest ->
+      let exprs, rest' = parse_exprs rest in
+      (match exprs with
+      | Some exprs' -> Some (Add exprs'), rest'
+      | None -> None, rest')
+  | '(' :: 'm' :: 'u' :: 'l' :: rest ->
+      let exprs, rest' = parse_exprs rest in
+      (match exprs with
+      | Some exprs' -> Some (Mul exprs'), rest'
+      | None -> None, rest')
   | _ ->
-      match parse_expr cs with
-      | Some (expr, rest) ->
-          (match parse_exprs op rest with
-          | Some (exprs, rest') -> Some (op (expr :: exprs), rest')
-          | None -> None)
-      | None -> None
+      let num, rest = parse_num tokens in
+      (match num with
+      | Some num' -> Some (Int num'), rest
+      | None -> None, rest)
+
+and parse_exprs (tokens : char list) : expr list option * char list =
+  match trim tokens with
+  | ')' :: rest -> Some [], rest
+  | _ ->
+      let expr, rest = parse_expr tokens in
+      (match expr with
+      | Some expr' ->
+          let exprs, rest' = parse_exprs rest in
+          (match exprs with
+          | Some exprs' -> Some (expr' :: exprs'), rest'
+          | None -> None, rest')
+      | None -> None, rest)
+
+and parse_num (tokens : char list) : int option * char list =
+  let rec parse_digits acc tokens =
+    match tokens with
+    | c :: rest when Char.is_digit c ->
+        let acc' = acc * 10 + Char.to_int c - Char.to_int '0' in
+        parse_digits acc' rest
+    | _ -> acc, tokens
+  in
+  let num, rest = parse_digits 0 tokens in
+  if num = 0 && tokens = rest then None, rest
+  else Some num, rest
 
 let parse (s : string) : expr option =
-  match parse_expr (string_listize s) with
-  | Some (expr, []) -> Some expr
+  let tokens = string_listize s in
+  let expr, rest = parse_expr tokens in
+  match expr with
+  | Some expr' when rest = [] -> Some expr'
   | _ -> None
