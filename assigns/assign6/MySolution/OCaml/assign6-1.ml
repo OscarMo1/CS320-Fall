@@ -62,17 +62,17 @@ let sexpr_parse(s : string) : sexpr option =
     (let* _ = whitespaces in
     let* _ = char '(' in
     let* _ = literal "add" in
-    let* y = many (parser_expr()) in
+    let* x = many (parser_expr()) in
     let* _ = char ')' in
-    pure(SAdd(y))
+    pure(SAdd(x))
     )
     <|>
     (let* _ = whitespaces in
     let* _ = char '(' in
     let* _ = literal "mul" in
-    let* z = many (parser_expr()) in
+    let* x = many (parser_expr()) in
     let* _ = char ')' in
-    pure(SMul(z))
+    pure(SMul(x))
     )
   in 
   match string_parse (parser_expr ()) s with
