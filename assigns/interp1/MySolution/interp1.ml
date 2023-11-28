@@ -83,13 +83,15 @@ match const with
 | Bool false -> "False"
 | Unit _ -> "Unit"
 
-
 let rec parse_prog(prog: com list) =
 	(
   let* _ = whitespaces in
   let* _ = keyword "Push" in
+	let* _ = whitespaces in
 	let* c = parse_const  () in
+	(* let _ = print_string (const_to_string c) in  *)
 	let* _ = char ';' in
+	let* _ = whitespaces in
 	parse_prog ((Push c) :: prog))
 	<|> 
 	(let* _ = keyword "Pop;" in
