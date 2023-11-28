@@ -1,196 +1,240 @@
 #use "./../../../classlib/OCaml/MyOCaml.ml";;
 
-type value =
-  | Int of int
-  | Bool of bool
-  | Unit
+(* 
+# specifications described in CS320_Fall_2023_Project-1.pdf
 
-type command =
-  | Push of value
-  | Pop
-  | Trace
-  | Add
-  | Sub
-  | Mul
-  | Div
-  | And
-  | Or
-  | Not
-  | Lt
-  | Gt
+Notes:
+1. You are only allowed to use library functions defined in MyOCaml.ml
+   or ones you implement yourself.
+2. You may NOT use OCaml standard library functions directly.
 
-type stack = value list
+*)
 
-type trace = string list
+type const = 
+| Int of int
+| Bool of bool
+| Unit of unit
 
-type config = { stack: stack; trace: trace; program: command list }
+type com =
+  | Push of const | Pop | Trace
+  | Add | Sub | Mul | Div
+  | And | Or | Not
+  | Lt | Gt
 
-let rec is_blank cs =
-  match cs with
-  | ' ' | '\n' | '\t' | '\r' -> true
-  | _ -> false
 
-let rec trim cs =
-  match string_get_at cs 0 with
-  | c when is_blank c -> trim (string_tail cs)
-  | _ -> cs
 
-let rec list_map f xs =
-  match xs with
-  | [] -> []
-  | x1 :: xs -> f x1 :: list_map f xs
+let parse_const () : const parser = 
+	(let* _ = char '-' in
+	let* x = natural in pure  (Int (-x)))
+	<|>
+	(let* n = natural in
+	pure ( Int n ))
+	<|> 
+	(let* _ = keyword "True" in 
+	pure (Bool (true) ))
+	<|> 
+	(let* _ = keyword "False" in 
+	pure (Bool( false )))
+	<|> 
+	(let* _ = keyword "Unit" in
+	pure (Unit( () )))
 
-let split_on_char sep str =
-  let rec split_acc acc current = function
-    | -1 -> current :: acc
-    | i ->
-      if string_get_at str i = sep then
-        split_acc (current :: acc) "" (i - 1)
+let rec array_len(xs: 'a list): int =
+	list_foldleft(xs)(0)(fun acc x ->
+		acc + 1)
+
+let num_length(x: int): int =
+   let rec num_length_helper(x: int)(count: int): int =
+      if x < 10 then count + 1
+      else num_length_helper (x / 10) (count + 1)
+   in
+   num_length_helper x 0
+;;
+    
+    
+    
+let int2str(i0: int): string =
+   (*get_digit returns the individual digit at specified index of number*)
+   let getDigit(x: int): int =
+   let rec getDigitHelper(x: int)(result: int): int =
+      if x = 0 then result
+      else getDigitHelper (x - 1) (result * 10)
+   in
+   getDigitHelper x 1 in
+      
+   let length = num_length (abs i0) in
+   let isNeg = i0 < 0 in
+   (*create string with length based on length and isNeg*)
+   string_init (length + (if isNeg then 1 else 0))
+   (* lambda function that calls index of the value of int and turns into string*)
+   (fun i -> 
+      if i = 0 && isNeg then '-'
       else
-        split_acc acc (string_cons (string_get_at str i) current) (i - 1)
-  in
-  split_acc [] "" (string_length str - 2)
+         let index = length - (if isNeg then (i - 1) else i) - 1 in
+         let digit = abs (i0 / getDigit index) mod 10
+      in
+      chr(ord '0' + digit)
+      );;
 
-let split_on_char_2 sep str =
-  let rec split_acc acc current = function
-    | -1 -> current :: acc
-    | i ->
-      if string_get_at str i = sep then
-        split_acc (current :: acc) "" (i - 1)
-      else
-        split_acc acc (string_cons (string_get_at str i) current) (i - 1)
-  in
-  split_acc [] "" (string_length str - 1)
+let const_to_string const =
+  match const with
+  | Int n -> string_of_int n
+  | Bool b -> if b then "True" else "False"
+  | Unit _ -> "Unit"
+       
 
-let string_of_bool b =
-  if b then "True" else "False"
+let rec parse_prog(prog: com list) =
+	(
+  let* _ = whitespaces in
+  let* _ = keyword "Push" in
+	let* _ = whitespaces in
+	let* c = parse_const  () in
+	let* _ = char ';' in
+	let* _ = whitespaces in
+	parse_prog ((Push c) :: prog))
+	<|> 
+	(let* _ = keyword "Pop;" in
+	parse_prog (Pop :: prog))
+	<|>
+	(let* _ = keyword "Trace;" in
+	parse_prog (Trace :: prog))
+	<|>
+	(let* _ = keyword "Add;" in
+	parse_prog (Add :: prog))
+	<|>	
+	(let* _ = keyword "Sub;" in
+	parse_prog (Sub :: prog))
+	<|>	
+	(let* _ = keyword "Mul;" in
+	parse_prog (Mul :: prog))
+	<|>	
+	(let* _ = keyword "Div;" in
+	parse_prog (Div :: prog))
+	<|>	
+	(let* _ = keyword "And;" in
+	parse_prog (And :: prog))
+	<|>	
+	(let* _ = keyword "Or;" in
+	parse_prog (Or :: prog))
+	<|>	
+	(let* _ = keyword "Not;" in
+	parse_prog (Not :: prog))
+	<|>	
+	(let* _ = keyword "Lt;" in
+	parse_prog (Lt :: prog))
+	<|>	
+	(let* _ = keyword "Gt;" in
+	parse_prog (Gt :: prog))
+	<|>
+	pure(list_reverse(prog))
 
-let rec string_of_int_custom n =
-  let digit_to_char d = char_of_digit (digit_of_char '0' + d) in
-  let rec aux acc n =
-    if n = 0 then
-      match acc with
-      | [] -> "0"
-      | _ -> string_concat_list (list_reverse acc)
-    else
-      let digit = n mod 10 in
-      aux (str(digit_to_char digit) :: acc) (n / 10)
-  in
-  aux [] n
+let string_parse_c(p: 'a parser)(s: string) =
+  p(string_listize(s))
 ;;
 
-let rec to_string : value -> string = function
-  | Int i -> string_of_int i
-  | Bool b -> string_of_bool b
-  | Unit -> "Unit"
-
-let rec eval_command : config -> config option = function
-  | { stack; trace; program = Push v :: rest } ->
-      let new_stack = v :: stack in
-      eval_command { stack = new_stack; trace; program = rest }
-
-  | { stack = v :: rest_stack; trace; program = Pop :: rest } ->
-      eval_command { stack = rest_stack; trace; program = rest }
-
-  | { stack = v :: rest_stack; trace; program = Trace :: rest } ->
-      let new_trace = to_string v :: trace in
-      eval_command { stack = rest_stack; trace = new_trace; program = rest }
-
-  | { stack = (Int i1) :: (Int i2) :: rest_stack; trace; program = Add :: rest } ->
-      let new_stack = Int (i1 + i2) :: rest_stack in
-      eval_command { stack = new_stack; trace; program = rest }
-
-  | { stack = (Int i1) :: (Int i2) :: rest_stack; trace; program = Sub :: rest } ->
-      let new_stack = Int (i1 - i2) :: rest_stack in
-      eval_command { stack = new_stack; trace; program = rest }
-
-  | { stack = (Int i1) :: (Int i2) :: rest_stack; trace; program = Mul :: rest } ->
-      let new_stack = Int (i1 * i2) :: rest_stack in
-      eval_command { stack = new_stack; trace; program = rest }
-
-  | { stack = (Int i1) :: (Int i2) :: rest_stack; trace; program = Div :: rest } ->
-      if i2 = 0 then 
-        let new_trace = "Panic" :: trace in
-        Some { stack = []; trace = new_trace; program = [] }
-      else
-        let new_stack = Int (i1 / i2) :: rest_stack in
-        eval_command { stack = new_stack; trace; program = rest }
-
-  | { stack = (Bool i1) :: (Bool i2) :: rest_stack; trace; program = And :: rest } ->
-      let new_stack = Bool (i1 && i2) :: rest_stack in
-        eval_command { stack = new_stack; trace; program = rest }
-
-  | { stack = (Bool i1) :: (Bool i2) :: rest_stack; trace; program = Or :: rest } ->
-      let new_stack = Bool (i1 || i2) :: rest_stack in
-        eval_command { stack = new_stack; trace; program = rest }
-
-  | { stack = (Bool v) :: rest_stack; trace; program = Not :: rest } ->
-      if v then 
-        eval_command { stack = Bool (false) :: rest_stack; trace; program = rest }
-      else
-        eval_command { stack = Bool (true) :: rest_stack; trace; program = rest }
-
-  | { stack = (Int i1) :: (Int i2) :: rest_stack; trace; program = Lt :: rest } ->
-      let new_stack = Bool (i1 < i2) :: rest_stack in
-      eval_command { stack = new_stack; trace; program = rest }
-
-  | { stack = (Int i1) :: (Int i2) :: rest_stack; trace; program = Gt :: rest } ->
-      let new_stack = Bool (i1 > i2) :: rest_stack in
-      eval_command { stack = new_stack; trace; program = rest }
-
-  | { stack; trace; program = [] } -> Some { stack; trace; program = [] }
-
-  | { stack; trace; program = _ } ->
-    (* Error: Unsupported operation or empty stack *)
-    let new_trace = "Panic" :: trace in
-    Some { stack = []; trace = new_trace; program = [] }
-
-let parse_value (s : string) : value option =
-  try Some (Int (int_of_string s))
-  with Failure _ -> (
-    match s with
-    | "True" -> Some (Bool true)
-    | "False" -> Some (Bool false)
-    | "Unit" -> Some Unit
-    | _ -> None
-  )
-
-let parse_command (s : string) : command option =
-  match split_on_char_2 ' ' s with
-  | ["Push"; value_str] -> (
-      match parse_value value_str with
-      | Some value -> Some (Push value)
-      | None -> None
-    )
-  | "Pop" :: [] -> Some Pop
-  | "Trace" :: [] -> Some Trace
-  | "Add" :: [] -> Some Add
-  | "Sub" :: [] -> Some Sub
-  | "Mul" :: [] -> Some Mul
-  | "Div" :: [] -> Some Div
-  | "And" :: [] -> Some And
-  | "Or" :: [] -> Some Or
-  | "Not" :: [] -> Some Not
-  | "Lt" :: [] -> Some Lt
-  | "Gt" :: [] -> Some Gt
-  | _ -> None
-
-let rec parse_program : string list -> command list option = function
-  | hd :: tl ->
-      (match parse_command hd with
-      | Some cmd ->
-          (match parse_program tl with
-          | Some rest -> Some (cmd :: rest)
-          | None -> None)
-      | None -> None)
-  | [] -> Some []
-
-let interp (program : string) : string list option =
-  let program_tokens = list_map trim (split_on_char ';' program) in
-  match parse_program program_tokens with
-  | Some program ->
-      let initial_config = { stack = []; trace = []; program } in
-      (match eval_command initial_config with
-      | Some final_config -> Some (list_reverse final_config.trace)
-      | None -> None)
-  | None -> None
+let interp (s: string) = 
+	let rec evaluate(stack: const list)(trace: string list)(prog: com list) = 
+		match prog with 
+		| c :: rest -> 
+			(match c with 
+			| Push ct -> evaluate(ct :: stack)(trace)(rest)
+			| Pop -> (if array_len stack = 0 then
+				(evaluate(stack)("Panic" :: trace)([])) else (
+					match stack with
+					| _ :: st -> evaluate(st)(trace)(rest)
+					| [] -> None
+				))
+			| Trace -> (if array_len stack = 0 then
+				(evaluate(stack)("Panic" :: trace)([])) else (
+					match stack with
+					| top :: st -> evaluate((Unit ()) :: st)(const_to_string (top) :: trace)(rest)
+					| [] -> None
+				))
+			| Add -> (if array_len stack < 2 then
+				(evaluate(stack)("Panic" :: trace)([])) else (
+					match stack with
+					| i :: j :: st -> 
+						(match i, j with
+						| (Int i, Int j) -> evaluate( Int (i + j) :: st)(trace)(rest)
+						| _, _ -> (evaluate(stack)("Panic" :: trace)([])))
+					| [] -> None
+				))
+			| Sub -> (if array_len stack < 2 then
+				(evaluate(stack)("Panic" :: trace)([])) else (
+					match stack with
+					| i :: j :: st -> 
+						(match i, j with
+						| (Int i, Int j) -> evaluate( Int (i - j) :: st)(trace)(rest)
+						| _, _ -> (evaluate(stack)("Panic" :: trace)([])))
+					| [] -> None
+				))
+			| Mul -> (if array_len stack < 2 then
+				(evaluate(stack)("Panic" :: trace)([])) else (
+					match stack with
+					| i :: j :: st -> 
+						(match i, j with
+						| (Int i, Int j) -> evaluate( Int (i * j) :: st)(trace)(rest)
+						| _, _ -> (evaluate(stack)("Panic" :: trace)([])))
+					| [] -> None
+				))
+			| Div -> (if array_len stack < 2 then
+				(evaluate(stack)("Panic" :: trace)([])) else (
+					match stack with
+					| i :: j :: st -> 
+						(match i, j with
+						| (Int _, Int 0) -> (evaluate(stack)("Panic" :: trace)([]))
+						| (Int i, Int j) -> evaluate( Int (i / j) :: st)(trace)(rest)
+						| _, _ -> (evaluate(stack)("Panic" :: trace)([])))
+					| [] -> None
+				))
+			| And -> (if array_len stack < 2 then
+				(evaluate(stack)("Panic" :: trace)([])) else (
+					match stack with
+					| i :: j :: st -> 
+						(match i, j with
+						| (Bool i, Bool j) -> evaluate( Bool (i && j) :: st)(trace)(rest)
+						| _, _ -> (evaluate(stack)("Panic" :: trace)([])))
+					| [] -> None
+				))
+			| Or -> (if array_len stack < 2 then
+				(evaluate(stack)("Panic" :: trace)([])) else (
+					match stack with
+					| i :: j :: st -> 
+						(match i, j with
+						| (Bool i, Bool j) -> evaluate( Bool (i || j) :: st)(trace)(rest)
+						| _, _ -> (evaluate(stack)("Panic" :: trace)([])))
+					| [] -> None
+				))
+			| Not -> (if array_len stack < 1 then
+				(evaluate(stack)("Panic" :: trace)([])) else (
+					match stack with
+					| i :: st -> 
+						(match i with
+						| Bool i -> evaluate( Bool (not i) :: st)(trace)(rest)
+						| _ -> (evaluate(stack)("Panic" :: trace)([])))
+					| [] -> None
+				))
+			| Lt -> (if array_len stack < 2 then
+				(evaluate(stack)("Panic" :: trace)([])) else (
+					match stack with
+					| i :: j :: st -> 
+						(match i, j with
+						| (Int i, Int j) -> evaluate( Bool (i < j) :: st)(trace)(rest)
+						| _, _ -> (evaluate(stack)("Panic" :: trace)([])))
+					| [] -> None
+				))
+			| Gt -> (if array_len stack < 2 then
+				(evaluate(stack)("Panic" :: trace)([])) else (
+					match stack with
+					| i :: j :: st -> 
+						(match i, j with
+						| (Int i, Int j) -> evaluate( Bool (i > j) :: st)(trace)(rest)
+						| _, _ -> (evaluate(stack)("Panic" :: trace)([])))
+					| [] -> None
+				))
+			)
+		| [] -> Some trace
+		in
+	match string_parse_c (parse_prog []) s with 
+	| Some (e, []) -> evaluate([])([])(e) 
+	| _ -> None  
