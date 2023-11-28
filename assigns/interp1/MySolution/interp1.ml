@@ -83,27 +83,27 @@ let const_to_string const =
   | Unit _ -> "Unit"
        
 
-  let parse_op op keyword_str = keyword keyword_str >>| fun _ -> op
-
-  let parse_prog' prog =
-    let parse_op_with_semicolon op keyword_str =
-      let* _ = char ';' in
-      let* _ = whitespaces in
-      parse_op op keyword_str
-    in
-    parse_op_with_semicolon (Push c) "Push" <*> parse_const () >>| fun (op, c) -> op :: prog
-    <|> parse_op_with_semicolon Pop "Pop" >>| fun op -> op :: prog
-    <|> parse_op_with_semicolon Trace "Trace" >>| fun op -> op :: prog
-    <|> parse_op_with_semicolon Add "Add" >>| fun op -> op :: prog
-    <|> parse_op_with_semicolon Sub "Sub" >>| fun op -> op :: prog
-    <|> parse_op_with_semicolon Mul "Mul" >>| fun op -> op :: prog
-    <|> parse_op_with_semicolon Div "Div" >>| fun op -> op :: prog
-    <|> parse_op_with_semicolon And "And" >>| fun op -> op :: prog
-    <|> parse_op_with_semicolon Or "Or" >>| fun op -> op :: prog
-    <|> parse_op_with_semicolon Not "Not" >>| fun op -> op :: prog
-    <|> parse_op_with_semicolon Lt "Lt" >>| fun op -> op :: prog
-    <|> parse_op_with_semicolon Gt "Gt" >>| fun op -> op :: prog
-    <|> pure (list_reverse prog)
+  let parse_op op keyword_str =
+   let* _ = keyword keyword_str in
+   let* _ = char ';' in
+   let* _ = whitespaces in
+   pure (op :: prog)
+ 
+ let parse_prog' prog =
+   parse_op (Push c) "Push" <*> parse_const () >>| fun (op, c) -> op :: prog
+   <|> parse_op Pop "Pop" >>| fun op -> op :: prog
+   <|> parse_op Trace "Trace" >>| fun op -> op :: prog
+   <|> parse_op Add "Add" >>| fun op -> op :: prog
+   <|> parse_op Sub "Sub" >>| fun op -> op :: prog
+   <|> parse_op Mul "Mul" >>| fun op -> op :: prog
+   <|> parse_op Div "Div" >>| fun op -> op :: prog
+   <|> parse_op And "And" >>| fun op -> op :: prog
+   <|> parse_op Or "Or" >>| fun op -> op :: prog
+   <|> parse_op Not "Not" >>| fun op -> op :: prog
+   <|> parse_op Lt "Lt" >>| fun op -> op :: prog
+   <|> parse_op Gt "Gt" >>| fun op -> op :: prog
+   <|> pure (list_reverse prog)
+ 
   
 
 let string_parse_c(p: 'a parser)(s: string) =
