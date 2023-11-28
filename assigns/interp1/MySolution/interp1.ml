@@ -83,50 +83,28 @@ let const_to_string const =
   | Unit _ -> "Unit"
        
 
-let rec parse_prog(prog: com list) =
-	(
-  let* _ = whitespaces in
-  let* _ = keyword "Push" in
-	let* _ = whitespaces in
-	let* c = parse_const  () in
-	let* _ = char ';' in
-	let* _ = whitespaces in
-	parse_prog ((Push c) :: prog))
-	<|> 
-	(let* _ = keyword "Pop;" in
-	parse_prog (Pop :: prog))
-	<|>
-	(let* _ = keyword "Trace;" in
-	parse_prog (Trace :: prog))
-	<|>
-	(let* _ = keyword "Add;" in
-	parse_prog (Add :: prog))
-	<|>	
-	(let* _ = keyword "Sub;" in
-	parse_prog (Sub :: prog))
-	<|>	
-	(let* _ = keyword "Mul;" in
-	parse_prog (Mul :: prog))
-	<|>	
-	(let* _ = keyword "Div;" in
-	parse_prog (Div :: prog))
-	<|>	
-	(let* _ = keyword "And;" in
-	parse_prog (And :: prog))
-	<|>	
-	(let* _ = keyword "Or;" in
-	parse_prog (Or :: prog))
-	<|>	
-	(let* _ = keyword "Not;" in
-	parse_prog (Not :: prog))
-	<|>	
-	(let* _ = keyword "Lt;" in
-	parse_prog (Lt :: prog))
-	<|>	
-	(let* _ = keyword "Gt;" in
-	parse_prog (Gt :: prog))
-	<|>
-	pure(list_reverse(prog))
+  let parse_op op_str op = keyword op_str >>| fun _ -> op
+
+  let parse_prog' prog =
+    let parse_op_with_semicolon op =
+      let* _ = char ';' in
+      let* _ = whitespaces in
+      parse_op op
+    in
+    parse_op "Push" Push
+    <|> parse_op_with_semicolon "Pop" >>| fun _ -> Pop
+    <|> parse_op_with_semicolon "Trace" >>| fun _ -> Trace
+    <|> parse_op_with_semicolon "Add" >>| fun _ -> Add
+    <|> parse_op_with_semicolon "Sub" >>| fun _ -> Sub
+    <|> parse_op_with_semicolon "Mul" >>| fun _ -> Mul
+    <|> parse_op_with_semicolon "Div" >>| fun _ -> Div
+    <|> parse_op_with_semicolon "And" >>| fun _ -> And
+    <|> parse_op_with_semicolon "Or" >>| fun _ -> Or
+    <|> parse_op_with_semicolon "Not" >>| fun _ -> Not
+    <|> parse_op_with_semicolon "Lt" >>| fun _ -> Lt
+    <|> parse_op_with_semicolon "Gt" >>| fun _ -> Gt
+    <|> pure (list_reverse prog)
+  
 
 let string_parse_c(p: 'a parser)(s: string) =
   p(string_listize(s))
