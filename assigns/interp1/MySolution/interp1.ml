@@ -132,64 +132,81 @@ let string_parse_c(p: 'a parser)(s: string) =
   p(string_listize(s))
 ;;
 
-let interp (s: string) = 
-	let rec evaluate stack trace prog =
-      let array_len = List.length in
-      let panic_trace = evaluate stack ("Panic" :: trace) [] in
-    
-      match prog with
-      | Push ct :: rest -> evaluate (ct :: stack) trace rest
-      | Pop :: rest ->
-        (match stack with
-        | _ :: st -> evaluate st trace rest
-        | [] -> None)
-      | Trace :: rest ->
-        (match stack with
-        | top :: st -> evaluate (Unit () :: st) (const_to_string top :: trace) rest
-        | [] -> None)
-      | Add :: rest | Sub :: rest | Mul :: rest | Div :: rest ->
-        (match stack with
-        | i :: j :: st ->
-          (match i, j with
-          | Int x, Int y ->
-            let result =
-              match prog with
-              | Add :: _ -> Int (x + y)
-              | Sub :: _ -> Int (x - y)
-              | Mul :: _ -> Int (x * y)
-              | Div :: _ when y = 0 -> panic_trace
-              | Div :: _ -> Int (x / y)
-              | _ -> failwith "Unexpected operator"
-            in
-            evaluate (result :: st) trace rest
-          | _ -> panic_trace)
-        | [] -> None)
-      | And :: rest | Or :: rest ->
-        (match stack with
-        | Bool x :: Bool y :: st ->
-          let result =
-            match prog with
-            | And :: _ -> Bool (x && y)
-            | Or :: _ -> Bool (x || y)
-            | _ -> failwith "Unexpected operator"
-          in
-          evaluate (result :: st) trace rest
-        | _ -> panic_trace)
-      | Not :: rest ->
-        (match stack with
-        | Bool x :: st -> evaluate (Bool (not x) :: st) trace rest
-        | _ -> panic_trace)
-      | Lt :: rest | Gt :: rest ->
-        (match stack with
-        | Int x :: Int y :: st ->
-          let result =
-            match prog with
-            | Lt :: _ -> Bool (x < y)
-            | Gt :: _ -> Bool (x > y)
-            | _ -> failwith "Unexpected operator"
-          in
-          evaluate (result :: st) trace rest
-        | _ -> panic_trace)
-      | _ :: _ -> panic_trace
-      | [] -> Some trace
-    
+let interp (s: string) =
+   let rec evaluate stack trace prog =
+     let array_len = List.length in
+ 
+     let panic_trace = evaluate stack ("Panic" :: trace) [] in
+ 
+     let pop_stack rest =
+       match stack with
+       | _ :: st -> evaluate st trace rest
+       | [] -> None
+     in
+ 
+     let push_unit rest =
+       match stack with
+       | top :: st -> evaluate (Unit () :: st) (const_to_string top :: trace) rest
+       | [] -> None
+     in
+ 
+     let binary_operation op_fn rest =
+       match stack with
+       | i :: j :: st ->
+         (match i, j with
+         | Int x, Int y -> evaluate (Int (op_fn x y) :: st) trace rest
+         | _ -> panic_trace)
+       | _ -> None
+     in
+ 
+     let division_operation rest =
+       match stack with
+       | i :: j :: st ->
+         (match i, j with
+         | Int _, Int 0 -> panic_trace
+         | Int x, Int y -> evaluate (Int (x / y) :: st) trace rest
+         | _ -> panic_trace)
+       | _ -> None
+     in
+ 
+     let boolean_operation op_fn rest =
+       match stack with
+       | Bool x :: Bool y :: st ->
+         evaluate (Bool (op_fn x y) :: st) trace rest
+       | _ -> panic_trace
+     in
+ 
+     let not_operation rest =
+       match stack with
+       | Bool x :: st -> evaluate (Bool (not x) :: st) trace rest
+       | _ -> panic_trace
+     in
+ 
+     let comparison_operation op_fn rest =
+       match stack with
+       | Int x :: Int y :: st ->
+         evaluate (Bool (op_fn x y) :: st) trace rest
+       | _ -> panic_trace
+     in
+ 
+     match prog with
+     | Push ct :: rest -> evaluate (ct :: stack) trace rest
+     | Pop :: rest -> (if array_len stack = 0 then panic_trace else pop_stack rest)
+     | Trace :: rest -> (if array_len stack = 0 then panic_trace else push_unit rest)
+     | Add :: rest -> (if array_len stack < 2 then panic_trace else binary_operation (+) rest)
+     | Sub :: rest -> (if array_len stack < 2 then panic_trace else binary_operation (-) rest)
+     | Mul :: rest -> (if array_len stack < 2 then panic_trace else binary_operation ( * ) rest)
+     | Div :: rest -> (if array_len stack < 2 then panic_trace else division_operation rest)
+     | And :: rest -> (if array_len stack < 2 then panic_trace else boolean_operation (&&) rest)
+     | Or :: rest -> (if array_len stack < 2 then panic_trace else boolean_operation (||) rest)
+     | Not :: rest -> (if array_len stack < 1 then panic_trace else not_operation rest)
+     | Lt :: rest -> (if array_len stack < 2 then panic_trace else comparison_operation (<) rest)
+     | Gt :: rest -> (if array_len stack < 2 then panic_trace else comparison_operation (>) rest)
+     | _ :: _ -> panic_trace
+     | [] -> Some trace
+   in
+ 
+   match string_parse_c (parse_prog []) s with 
+   | Some (e, []) -> evaluate [] [] e
+   | _ -> None
+ 
