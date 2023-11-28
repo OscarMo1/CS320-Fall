@@ -83,26 +83,26 @@ let const_to_string const =
   | Unit _ -> "Unit"
        
 
-  let parse_op op_str op = keyword op_str >>| fun _ -> op
+  let parse_op op keyword_str = keyword keyword_str >>| fun _ -> op
 
   let parse_prog' prog =
-    let parse_op_with_semicolon op =
+    let parse_op_with_semicolon op keyword_str =
       let* _ = char ';' in
       let* _ = whitespaces in
-      parse_op op
+      parse_op op keyword_str
     in
-    parse_op "Push" Push
-    <|> parse_op_with_semicolon "Pop" >>| fun _ -> Pop
-    <|> parse_op_with_semicolon "Trace" >>| fun _ -> Trace
-    <|> parse_op_with_semicolon "Add" >>| fun _ -> Add
-    <|> parse_op_with_semicolon "Sub" >>| fun _ -> Sub
-    <|> parse_op_with_semicolon "Mul" >>| fun _ -> Mul
-    <|> parse_op_with_semicolon "Div" >>| fun _ -> Div
-    <|> parse_op_with_semicolon "And" >>| fun _ -> And
-    <|> parse_op_with_semicolon "Or" >>| fun _ -> Or
-    <|> parse_op_with_semicolon "Not" >>| fun _ -> Not
-    <|> parse_op_with_semicolon "Lt" >>| fun _ -> Lt
-    <|> parse_op_with_semicolon "Gt" >>| fun _ -> Gt
+    parse_op_with_semicolon (Push c) "Push" <*> parse_const () >>| fun (op, c) -> op :: prog
+    <|> parse_op_with_semicolon Pop "Pop" >>| fun op -> op :: prog
+    <|> parse_op_with_semicolon Trace "Trace" >>| fun op -> op :: prog
+    <|> parse_op_with_semicolon Add "Add" >>| fun op -> op :: prog
+    <|> parse_op_with_semicolon Sub "Sub" >>| fun op -> op :: prog
+    <|> parse_op_with_semicolon Mul "Mul" >>| fun op -> op :: prog
+    <|> parse_op_with_semicolon Div "Div" >>| fun op -> op :: prog
+    <|> parse_op_with_semicolon And "And" >>| fun op -> op :: prog
+    <|> parse_op_with_semicolon Or "Or" >>| fun op -> op :: prog
+    <|> parse_op_with_semicolon Not "Not" >>| fun op -> op :: prog
+    <|> parse_op_with_semicolon Lt "Lt" >>| fun op -> op :: prog
+    <|> parse_op_with_semicolon Gt "Gt" >>| fun op -> op :: prog
     <|> pure (list_reverse prog)
   
 
