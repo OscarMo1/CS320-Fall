@@ -1,125 +1,196 @@
 #use "./../../../classlib/OCaml/MyOCaml.ml";;
 
-(*
+type value =
+  | Int of int
+  | Bool of bool
+  | Unit
 
-Please implement the interp function following the
-specifications described in CS320_Fall_2023_Project-1.pdf
+type command =
+  | Push of value
+  | Pop
+  | Trace
+  | Add
+  | Sub
+  | Mul
+  | Div
+  | And
+  | Or
+  | Not
+  | Lt
+  | Gt
 
-Notes:
-1. You are only allowed to use library functions defined in MyOCaml.ml
-   or ones you implement yourself.
-2. You may NOT use OCaml standard library functions directly.
+type stack = value list
 
-*)
+type trace = string list
 
-type constant = Int of int | Bool of bool | Unit
-type command = Push of constant | Pop | Trace | Add | Sub | Mul | Div | And | Or | Not | Lt | Gt
-type state = constant list * string list
+type config = { stack: stack; trace: trace; program: command list }
 
-let constant_to_string = function
+let rec is_blank cs =
+  match cs with
+  | ' ' | '\n' | '\t' | '\r' -> true
+  | _ -> false
+
+let rec trim cs =
+  match string_get_at cs 0 with
+  | c when is_blank c -> trim (string_tail cs)
+  | _ -> cs
+
+let rec list_map f xs =
+  match xs with
+  | [] -> []
+  | x1 :: xs -> f x1 :: list_map f xs
+
+let split_on_char sep str =
+  let rec split_acc acc current = function
+    | -1 -> current :: acc
+    | i ->
+      if string_get_at str i = sep then
+        split_acc (current :: acc) "" (i - 1)
+      else
+        split_acc acc (string_cons (string_get_at str i) current) (i - 1)
+  in
+  split_acc [] "" (string_length str - 2)
+
+let split_on_char_2 sep str =
+  let rec split_acc acc current = function
+    | -1 -> current :: acc
+    | i ->
+      if string_get_at str i = sep then
+        split_acc (current :: acc) "" (i - 1)
+      else
+        split_acc acc (string_cons (string_get_at str i) current) (i - 1)
+  in
+  split_acc [] "" (string_length str - 1)
+
+let string_of_bool b =
+  if b then "True" else "False"
+
+let rec string_of_int_custom n =
+  let digit_to_char d = char_of_digit (digit_of_char '0' + d) in
+  let rec aux acc n =
+    if n = 0 then
+      match acc with
+      | [] -> "0"
+      | _ -> string_concat_list (list_reverse acc)
+    else
+      let digit = n mod 10 in
+      aux (str(digit_to_char digit) :: acc) (n / 10)
+  in
+  aux [] n
+;;
+
+let rec to_string : value -> string = function
   | Int i -> string_of_int i
-  | Bool b -> if b then "True" else "False"
+  | Bool b -> string_of_bool b
   | Unit -> "Unit"
 
-let string_of_char_list char_list =
-  string_make_fwork (fun work -> list_foreach char_list (fun c -> work (c)))
+let rec eval_command : config -> config option = function
+  | { stack; trace; program = Push v :: rest } ->
+      let new_stack = v :: stack in
+      eval_command { stack = new_stack; trace; program = rest }
 
-let parse_constant s =
-  let rec parse_digits chars accum neg =
-    match chars with
-    | '-' :: cs when accum = 0 && not neg -> parse_digits cs accum true
-    | [] -> if neg = true then Some (-1 * accum) else Some accum
-    | c :: cs ->
-        if char_isdigit c then
-          let digit = digit_of_char c in
-          parse_digits cs (10 * accum + digit) neg
-        else
-          None
-  in
-  match s with
-  | "True" -> Some (Bool true)
-  | "False" -> Some (Bool false)
-  | "Unit" -> Some Unit
-  | _ ->
-      match parse_digits (string_listize s) 0 false with
-      | Some n -> Some (Int n)
-      | None -> None
+  | { stack = v :: rest_stack; trace; program = Pop :: rest } ->
+      eval_command { stack = rest_stack; trace; program = rest }
 
-let split_string (s : string) : string list =
-  let rec aux (cs : char list) (current : string) (acc : string list) : string list =
-    match cs with
-    | [] -> 
-        if current = "" then acc else current :: acc
-    | ';' :: rest -> 
-        aux rest "" (current :: acc)
-    | c :: rest ->
-        if char_iswhitespace c then
-          if current = "" then
-            aux rest current acc
-          else
-            aux rest "" (current :: acc)
-        else
-          aux rest (current ^ str c) acc
-  in 
-  list_reverse (aux (string_listize s) "" [])
+  | { stack = v :: rest_stack; trace; program = Trace :: rest } ->
+      let new_trace = to_string v :: trace in
+      eval_command { stack = rest_stack; trace = new_trace; program = rest }
 
-let parse_program s =
-  let tokens = split_string s in
-  let rec parse tokens =
-    match tokens with
-    | [] -> Some []
-    | "" :: rest -> parse rest
-    | "Push" :: value :: rest -> 
-        (match parse_constant value with
-        | Some const -> (match parse rest with
-                         | Some cmds -> Some (Push const :: cmds)
-                         | None -> None)
-        | None -> None)
-    | "Push" :: [] -> None
-    | "Pop" :: rest -> 
-        (match parse rest with
-        | Some cmds -> Some (Pop :: cmds)
-        | None -> None)
-    | "Trace" :: rest -> 
-        (match parse rest with
-        | Some cmds -> Some (Trace :: cmds)
-        | None -> None)
-    | "Add" :: rest ->
-         (match parse rest with
-         | Some cmds -> Some (Add :: cmds)
-         | None -> None)
-    | "Sub" :: rest ->
-         (match parse rest with
-         | Some cmds -> Some (Sub :: cmds)
-         | None -> None)
-    | "Mul" :: rest ->
-         (match parse rest with
-         | Some cmds -> Some (Mul :: cmds)
-         | None -> None)
-    | "Div" :: rest ->
-         (match parse rest with
-         | Some cmds -> Some (Div :: cmds)
-         | None -> None)
-    | "And" :: rest ->
-         (match parse rest with
-         | Some cmds -> Some (And :: cmds)
-         | None -> None)
-    | "Or" :: rest ->
-         (match parse rest with
-         | Some cmds -> Some (Or :: cmds)
-         | None -> None)
-    | "Not" :: rest ->
-         (match parse rest with
-         | Some cmds -> Some (Not :: cmds)
-         | None -> None)
-    | "Lt" :: rest ->
-         (match parse rest with
-         | Some cmds -> Some (Lt :: cmds)
-         | None -> None)
-    | "Gt" :: rest ->
-         (match parse rest with
-         | Some cmds -> Some (Gt :: cmds)
-         | None -> None)
+  | { stack = (Int i1) :: (Int i2) :: rest_stack; trace; program = Add :: rest } ->
+      let new_stack = Int (i1 + i2) :: rest_stack in
+      eval_command { stack = new_stack; trace; program = rest }
+
+  | { stack = (Int i1) :: (Int i2) :: rest_stack; trace; program = Sub :: rest } ->
+      let new_stack = Int (i1 - i2) :: rest_stack in
+      eval_command { stack = new_stack; trace; program = rest }
+
+  | { stack = (Int i1) :: (Int i2) :: rest_stack; trace; program = Mul :: rest } ->
+      let new_stack = Int (i1 * i2) :: rest_stack in
+      eval_command { stack = new_stack; trace; program = rest }
+
+  | { stack = (Int i1) :: (Int i2) :: rest_stack; trace; program = Div :: rest } ->
+      if i2 = 0 then 
+        let new_trace = "Panic" :: trace in
+        Some { stack = []; trace = new_trace; program = [] }
+      else
+        let new_stack = Int (i1 / i2) :: rest_stack in
+        eval_command { stack = new_stack; trace; program = rest }
+
+  | { stack = (Bool i1) :: (Bool i2) :: rest_stack; trace; program = And :: rest } ->
+      let new_stack = Bool (i1 && i2) :: rest_stack in
+        eval_command { stack = new_stack; trace; program = rest }
+
+  | { stack = (Bool i1) :: (Bool i2) :: rest_stack; trace; program = Or :: rest } ->
+      let new_stack = Bool (i1 || i2) :: rest_stack in
+        eval_command { stack = new_stack; trace; program = rest }
+
+  | { stack = (Bool v) :: rest_stack; trace; program = Not :: rest } ->
+      if v then 
+        eval_command { stack = Bool (false) :: rest_stack; trace; program = rest }
+      else
+        eval_command { stack = Bool (true) :: rest_stack; trace; program = rest }
+
+  | { stack = (Int i1) :: (Int i2) :: rest_stack; trace; program = Lt :: rest } ->
+      let new_stack = Bool (i1 < i2) :: rest_stack in
+      eval_command { stack = new_stack; trace; program = rest }
+
+  | { stack = (Int i1) :: (Int i2) :: rest_stack; trace; program = Gt :: rest } ->
+      let new_stack = Bool (i1 > i2) :: rest_stack in
+      eval_command { stack = new_stack; trace; program = rest }
+
+  | { stack; trace; program = [] } -> Some { stack; trace; program = [] }
+
+  | { stack; trace; program = _ } ->
+    (* Error: Unsupported operation or empty stack *)
+    let new_trace = "Panic" :: trace in
+    Some { stack = []; trace = new_trace; program = [] }
+
+let parse_value (s : string) : value option =
+  try Some (Int (int_of_string s))
+  with Failure _ -> (
+    match s with
+    | "True" -> Some (Bool true)
+    | "False" -> Some (Bool false)
+    | "Unit" -> Some Unit
     | _ -> None
-  in
-  parse tokens
+  )
+
+let parse_command (s : string) : command option =
+  match split_on_char_2 ' ' s with
+  | ["Push"; value_str] -> (
+      match parse_value value_str with
+      | Some value -> Some (Push value)
+      | None -> None
+    )
+  | "Pop" :: [] -> Some Pop
+  | "Trace" :: [] -> Some Trace
+  | "Add" :: [] -> Some Add
+  | "Sub" :: [] -> Some Sub
+  | "Mul" :: [] -> Some Mul
+  | "Div" :: [] -> Some Div
+  | "And" :: [] -> Some And
+  | "Or" :: [] -> Some Or
+  | "Not" :: [] -> Some Not
+  | "Lt" :: [] -> Some Lt
+  | "Gt" :: [] -> Some Gt
+  | _ -> None
+
+let rec parse_program : string list -> command list option = function
+  | hd :: tl ->
+      (match parse_command hd with
+      | Some cmd ->
+          (match parse_program tl with
+          | Some rest -> Some (cmd :: rest)
+          | None -> None)
+      | None -> None)
+  | [] -> Some []
+
+let interp (program : string) : string list option =
+  let program_tokens = list_map trim (split_on_char ';' program) in
+  match parse_program program_tokens with
+  | Some program ->
+      let initial_config = { stack = []; trace = []; program } in
+      (match eval_command initial_config with
+      | Some final_config -> Some (list_reverse final_config.trace)
+      | None -> None)
+  | None -> None
