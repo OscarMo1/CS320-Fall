@@ -76,12 +76,12 @@ let int2str(i0: int): string =
       chr(ord '0' + digit)
       );;
 
-let const_to_string(const): string = 
-match const with
-| Int n -> int2str n
-| Bool true -> "True"
-| Bool false -> "False"
-| Unit _ -> "Unit"
+let const_to_string const =
+  match const with
+  | Int n -> string_of_int n
+  | Bool b -> if b then "True" else "False"
+  | Unit _ -> "Unit"
+       
 
 let rec parse_prog(prog: com list) =
 	(
@@ -89,7 +89,6 @@ let rec parse_prog(prog: com list) =
   let* _ = keyword "Push" in
 	let* _ = whitespaces in
 	let* c = parse_const  () in
-	(* let _ = print_string (const_to_string c) in  *)
 	let* _ = char ';' in
 	let* _ = whitespaces in
 	parse_prog ((Push c) :: prog))
@@ -240,9 +239,3 @@ let interp (s: string) =
 	| Some (e, []) -> evaluate([])([])(e) 
 	| _ -> None  
 
-(* 
-let interp (s : string) : string list option = 
-	match string_parse_c (parse_prog ([])) s with 
-	| Some (e, []) -> Some e
-	| _ -> None 
- *)
