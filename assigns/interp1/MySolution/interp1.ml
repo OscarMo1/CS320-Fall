@@ -1,7 +1,9 @@
 #use "./../../../classlib/OCaml/MyOCaml.ml";;
 
-(* 
-# specifications described in CS320_Fall_2023_Project-1.pdf
+(*
+
+Please implement the interp function following the
+specifications described in CS320_Fall_2023_Project-1.pdf
 
 Notes:
 1. You are only allowed to use library functions defined in MyOCaml.ml
@@ -14,93 +16,52 @@ type constant = Int of int | Bool of bool | Unit
 type command = Push of constant | Pop | Trace | Add | Sub | Mul | Div | And | Or | Not | Lt | Gt
 type state = constant list * string list
 
-(* Helper functions *)
 let constant_to_string = function
   | Int i -> string_of_int i
   | Bool b -> if b then "True" else "False"
   | Unit -> "Unit"
 
-let is_int = function
-  | Int _ -> true
-  | _ -> false
+let string_of_char_list char_list =
+  string_make_fwork (fun work -> list_foreach char_list (fun c -> work (c)))
 
-let is_bool = function
-  | Bool _ -> true
-  | _ -> false
-
-(* Helper function to convert a list of characters back into a string *)
-let rec string_of_char_list char_list =
-  let rec aux chars acc =
+let parse_constant s =
+  let rec parse_digits chars accum neg =
     match chars with
-    | [] -> acc
-    | c :: cs -> aux cs (acc ^ str c)
-  in aux char_list ""
-
-(* Helper function to drop the first character of a string if it is a negative sign *)
-let drop_negative_sign s =
-  let char_list = string_listize s in
-  match char_list with
-  | '-' :: rest -> (true, string_of_char_list rest) (* Returns a tuple with a flag and the rest of the string *)
-  | _ -> (false, s) 
-
-let parse_constant s = 
+    | '-' :: cs when accum = 0 && not neg -> parse_digits cs accum true
+    | [] -> if neg = true then Some (-1 * accum) else Some accum
+    | c :: cs ->
+        if char_isdigit c then
+          let digit = digit_of_char c in
+          parse_digits cs (10 * accum + digit) neg
+        else
+          None
+  in
   match s with
   | "True" -> Some (Bool true)
   | "False" -> Some (Bool false)
   | "Unit" -> Some Unit
   | _ ->
-      let (is_negative, digits) = drop_negative_sign s in
-      let rec parse_digits chars accum =
-        match chars with
-        | [] -> Some accum
-        | c :: cs -> 
-            if char_isdigit c then
-              let digit = digit_of_char c in
-              parse_digits cs (10 * accum + digit)
-            else
-              None
-      in
-      match parse_digits (string_listize digits) 0 with
-      | Some n -> Some (Int (if is_negative then -n else n))
+      match parse_digits (string_listize s) 0 false with
+      | Some n -> Some (Int n)
       | None -> None
-   
-
-
-(* Parses a string into a command - Placeholder, extend to handle all cases *)
-let parse_command s =
-  match s with
-  | "Pop" -> Some Pop
-  | "Trace" -> Some Trace
-  | "Add" -> Some Add
-  | "Sub" -> Some Sub
-  | "Mul" -> Some Mul
-  | "Div" -> Some Div
-  | "And" -> Some And
-  | "Or" -> Some Or
-  | "Not" -> Some Not
-  | "Lt" -> Some Lt
-  | "Gt" -> Some Gt
-  | "" -> None
-  | _ -> None
 
 let split_string (s : string) : string list =
   let rec aux (cs : char list) (current : string) (acc : string list) : string list =
     match cs with
     | [] -> 
-        if current = "" then acc else current :: acc (* Handle the last word *)
+        if current = "" then acc else current :: acc
     | ';' :: rest -> 
-        aux rest "" (current :: acc) (* Split on semicolon *)
+        aux rest "" (current :: acc)
     | c :: rest ->
         if char_iswhitespace c then
           if current = "" then
-            aux rest current acc (* Skip multiple spaces *)
+            aux rest current acc
           else
-            aux rest "" (current :: acc) (* End of a word *)
+            aux rest "" (current :: acc)
         else
-          aux rest (current ^ str c) acc (* Accumulate characters *)
+          aux rest (current ^ str c) acc
   in 
-  list_reverse (aux (string_listize s) "" []) 
-
+  list_reverse (aux (string_listize s) "" [])
 
 let parse_program s =
   let tokens = split_string s in
@@ -162,82 +123,3 @@ let parse_program s =
     | _ -> None
   in
   parse tokens
-
-(* Evaluates a single command *)
-let eval_command cmd (stack, trace) =
-  match cmd with
-  | Push c -> Some (c :: stack, trace)
-  | Pop -> 
-      (match stack with
-      | [] -> Some ([], "Panic" :: trace)  
-      | _ :: rest -> Some (rest, trace))
-  | Trace -> 
-      (match stack with
-      | [] -> Some ([Unit], "Panic" :: trace) 
-      | c :: rest -> Some (Unit :: rest, (constant_to_string c) :: trace))
-  | Add -> 
-      (match stack with
-      | Int i :: Int j :: rest -> Some ((Int (i + j)) :: rest, trace)
-      | _ -> Some ([], "Panic" :: trace))
-  | Sub -> 
-      (match stack with
-      | Int j :: Int i :: rest -> Some ((Int (i - j)) :: rest, trace) 
-      | _ -> Some ([], "Panic" :: trace)) (* SubError: Stack Underflow or Type Mismatch *)
-  | Mul -> 
-      (match stack with
-      | Int i :: Int j :: rest -> Some ((Int (i * j)) :: rest, trace)
-      | _ -> Some ([], "Panic" :: trace)) (* MulError: Stack Underflow or Type Mismatch *)
-  | Div -> 
-      (match stack with
-      | Int j :: Int i :: rest -> 
-          if j = 0 then 
-              Some ([], "Panic" :: trace)  (* DivisionError: Division by Zero *)
-          else 
-              Some ((Int (i / j)) :: rest, trace)
-      | _ -> Some ([], "Panic" :: trace)) (* DivError: Stack Underflow or Type Mismatch *)
-  | And -> 
-      (match stack with
-      | Bool i :: Bool j :: rest -> Some ((Bool (i && j)) :: rest, trace)
-      | _ -> Some ([], "Panic" :: trace)) (* AndError: Stack Underflow or Type Mismatch *)
-  | Or -> 
-      (match stack with
-      | Bool i :: Bool j :: rest -> Some ((Bool (i || j)) :: rest, trace)
-      | _ -> Some ([], "Panic" :: trace)) (* OrError: Stack Underflow or Type Mismatch *)
-  | Not -> 
-      (match stack with
-      | Bool i :: rest -> Some ((Bool (not i)) :: rest, trace)
-      | _ -> Some ([], "Panic" :: trace)) (* NotError: Stack Underflow or Type Mismatch *)
-  | Lt -> 
-      (match stack with
-      | Int j :: Int i :: rest -> Some ((Bool (i < j)) :: rest, trace)  
-      | _ -> Some ([], "Panic" :: trace)) (* LtError: Stack Underflow or Type Mismatch *)
-  | Gt -> 
-      (match stack with
-      | Int j :: Int i :: rest -> Some ((Bool (i > j)) :: rest, trace)
-      | _ -> Some ([], "Panic" :: trace)) (* GtError: Stack Underflow or Type Mismatch *)
-
-let rec contains_panic trace = 
-  match trace with
-  | [] -> false
-  | x :: xs -> if x = "Panic" then true else contains_panic xs
-
-let rec eval_commands cmds state =
-  match cmds with
-  | [] -> Some state
-  | cmd :: rest ->
-      match eval_command cmd state with
-      | Some (new_stack, new_trace) -> 
-          if contains_panic new_trace then
-            Some (new_stack, new_trace)  (* Stop execution if there is a "Panic" *)
-          else
-            eval_commands rest (new_stack, new_trace)
-      | None -> None
-
-let interp (s : string) : string list option =
-  match parse_program s with
-  | None -> None  (* Parsing error, return None *)
-  | Some cmds -> 
-      let initial_state = ([], []) in
-      match eval_commands cmds initial_state with
-      | Some (_, trace) -> Some (list_reverse trace) 
-      | None -> Some ["Panic"]
