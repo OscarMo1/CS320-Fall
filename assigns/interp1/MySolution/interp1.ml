@@ -10,20 +10,6 @@ Notes:
 
 *)
 
-#use "./../../../../Classlib/OCaml/MyOCaml.ml";;
-
-(*
-
-Please implement the interp function following the
-specifications described in CS320_Fall_2023_Project-1.pdf
-
-Notes:
-1. You are only allowed to use library functions defined in MyOCaml.ml
-   or ones you implement yourself.
-2. You may NOT use OCaml standard library functions directly.
-
-*)
-
 type constant = Int of int | Bool of bool | Unit
 type command = Push of constant | Pop | Trace | Add | Sub | Mul | Div | And | Or | Not | Lt | Gt
 type state = constant list * string list
