@@ -12,490 +12,293 @@ Notes:
 
 *)
 
-(* defining types *)
-type constant = 
-   |Int of int 
-   |Bool of bool 
-   |Unit 
-;;
+(*
+⟨digit⟩ ::= 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
+⟨nat⟩ ::= ⟨digit⟩ | ⟨digit⟩⟨nat⟩
+⟨int⟩ ::= ⟨nat⟩ | -⟨nat⟩
+⟨bool ⟩ ::= True | False
+⟨char ⟩ ::= a | b | ... | z
+⟨sym⟩ ::= ⟨char ⟩ | ⟨sym⟩⟨char ⟩ | ⟨sym⟩⟨digit⟩
+⟨const⟩ ::= ⟨int⟩ | ⟨bool ⟩ | Unit | ⟨sym⟩
 
-(* type stackfun = {name: string; varenv: string; coms: string};; *)
+⟨prog⟩ ::= ⟨coms⟩
+⟨com⟩ ::= Push ⟨const⟩ | Pop | Swap | Trace
+| Add | Sub | Mul | Div
+| And | Or | Not
+| Lt | Gt
+| If ⟨coms⟩ Else ⟨coms⟩ End
+| Bind | Lookup
+| Fun ⟨coms⟩ End | Call | Return
+⟨coms⟩ ::= ϵ | ⟨com⟩; ⟨coms⟩
 
-(* type stackfun = string * (string list * constant list) * com list *)
+*)
 
-type symbol = string;;
+type const =
+  | Int of int 
+  | Bool of bool 
+  | Unit
+  | Symbol of string
+  | Closure of (string * ((string * const) list) * coms)
 
-type value = 
-   |Constant of constant 
-   |Symbol of symbol
-   |Closure of closure
 
-and 
-   closure = symbol * (string list * value list) * com list
-   (* {
-      name: symbol;
-      varenv: string list * value list;
-      coms: com list
-   } *)
-and
-   com = 
-      |Push of value
-      |Pop
-      |Trace
-      |Add 
-      |Sub 
-      |Mul
-      |Div
-      |And 
-      |Or 
-      |Not 
-      |Lt 
-      |Gt
-      |Swap
-      |IfElse of com list list
-      |Bind 
-      |Lookup
-      |Fun of com list
-      |Call
-      |Return 
-;;
+and com =
+  | Push of const 
+  | Pop 
+  | Swap 
+  | Trace
+  | Add 
+  | Sub 
+  | Mul 
+  | Div
+  | And 
+  | Or 
+  | Not
+  | Lt 
+  | Gt 
+  | If of coms * coms
+  | Bind 
+  | Lookup
+  | Fun of coms 
+  | Call 
+  | Return
 
-(* returns string representation of an integer *)
-let rec intToString(x: int): string =
-   if x < 0 then string_append "-" (intToString (x * -1))
-   else if x < 10 then str (char_of_digit x)
-   else string_append (intToString (x / 10)) (intToString (x mod 10))
-;;
+and coms = com list
+type stack = const list
+type trace = string list
+type prog = coms
+type env = (string * const) list
 
-(* returns string presentations of a constant *)
-let constantToString(x: constant): string = 
-   match x with
-   |Unit -> "Unit"
-   |Bool b -> if b then "True" else "False"
-   |Int i -> intToString i 
-;;
 
-let toString(x: value): string = 
-   match x with 
-   |Constant x -> constantToString x 
-   |Symbol x -> x
-   |Closure c -> 
-      match c with 
-      |(name, varenv, coms) -> string_append (string_append "Fun<" name) ">"
-;;
+let parse_nat = let* n = natural << whitespaces in pure n
+ 
+let parse_int =
+  (let* n = parse_nat in pure (Int n)) <|>
+  (keyword "-" >> let* n = parse_nat in pure (Int (-n)))
+ 
+let parse_bool =
+  (keyword "True" >> pure (Bool true)) <|>
+  (keyword "False" >> pure (Bool false))
+ 
+let parse_unit =
+  keyword "Unit" >> pure Unit
 
-(* defining boolean operators *)
-let andd(a: bool)(b: bool): bool = 
-   if a then 
-      if b then true 
-      else false 
-   else false
-;;
-
-let orr(a: bool)(b: bool): bool = 
-   if a then 
-      true 
-   else if b then 
-      true 
-   else false
-;;
-
-let nott(a: bool): bool = 
-   if a then false else true 
-;;
-
-(* parse constants *)
-let rec parse_constant () : value parser = 
-   parse_pos () <|> parse_neg () <|> parse_true () <|> parse_false () <|> parse_unit ()
-
-   and parse_pos () : value parser =
-      let* n = natural in
-      pure (Constant(Int n)) << whitespaces
-
-   and parse_neg () : value parser = 
-      let* _ = keyword "-" in 
-      let* n = natural in 
-      pure (Constant(Int (-1 * n))) << whitespaces
-
-   and parse_true () : value parser =
-      let* _ = keyword "True" in
-      pure (Constant(Bool true)) << whitespaces
-   
-   and parse_false () : value parser = 
-      let* _ = keyword "False" in 
-      pure (Constant(Bool false)) << whitespaces
-
-   and parse_unit () : value parser = 
-      let* _ = keyword "Unit" in 
-      pure (Constant(Unit)) << whitespaces
-;;
-
-let (&&) = andd;;
-
-let (||) = orr;;
-
-let (!!) = nott;;
-
-let alphanum = 
-   (satisfy char_isdigit) <|> (satisfy char_islower) <|> (satisfy char_isupper)
-
-let str : string parser =
+let char_escaped c =
+    match c with
+    | '\n' -> "\\n"
+    | '\t' -> "\\t"
+    | '\r' -> "\\r"
+    | '\\' -> "\\\\"
+    | '\'' -> "\\'"
+    | _    -> str c
+let character_grabber =
+  let* chars = many (satisfy char_isletter) in
+  pure (list_make_fwork (fun work -> list_foreach chars work))
+let parse_string : string parser =
   fun ls ->
-  let@ (xs, ls) = many1 alphanum ls in
-  Some(list_foldleft(xs)("") (fun acc c -> string_snoc acc c), ls)
-;;
-
-let rec parse_symbol () : value parser = 
-   parse_x () 
-
-   and parse_x () : value parser =
-      let* s = str in 
-      pure (Symbol s) << whitespaces
-;;
-
-let parse_value () : value parser = 
-   parse_constant () <|> parse_symbol ()
-;;
-
-
-(* parse coms *)
-let rec parse_com () : com parser =
-   parse_push () <|> parse_pop () <|> parse_trace () <|> 
-   parse_add () <|> parse_sub () <|> parse_mul () <|> 
-   parse_div () <|> parse_and () <|> parse_or () <|> 
-   parse_not () <|> parse_lt () <|> parse_gt() <|>
-   parse_swap () <|> parse_ifelse () <|> parse_bind () <|>
-   parse_lookup () <|> parse_fun () <|> parse_call () <|>
-   parse_return ()
-
-   and parse_push () : com parser =
-      let* _ = keyword "Push" in
-      let* c = parse_value () in
-      let* _ = keyword ";" in
-      pure (Push c)
-
-   and parse_pop () : com parser =
-      let* _ = keyword "Pop" in
-      let* _ = keyword ";" in
-      pure (Pop)
-
-   and parse_trace () : com parser =
-      let* _ = keyword "Trace" in
-      let* _ = keyword ";" in
-      pure (Trace)
-
-   and parse_add () : com parser =
-      let* _ = keyword "Add" in
-      let* _ = keyword ";" in
-      pure (Add)
-
-   and parse_sub () : com parser =
-      let* _ = keyword "Sub" in
-      let* _ = keyword ";" in
-      pure (Sub)
-
-   and parse_mul () : com parser =
-      let* _ = keyword "Mul" in
-      let* _ = keyword ";" in
-      pure (Mul)
-
-   and parse_div () : com parser =
-      let* _ = keyword "Div" in
-      let* _ = keyword ";" in
-      pure (Div)
-
-   and parse_and () : com parser =
-      let* _ = keyword "And" in
-      let* _ = keyword ";" in
-      pure (And)
-
-   and parse_or () : com parser =
-      let* _ = keyword "Or" in
-      let* _ = keyword ";" in
-      pure (Or)
-
-   and parse_not () : com parser =
-      let* _ = keyword "Not" in
-      let* _ = keyword ";" in
-      pure (Not)
-
-   and parse_lt () : com parser =
-      let* _ = keyword "Lt" in
-      let* _ = keyword ";" in
-      pure (Lt)
-
-   and parse_gt () : com parser =
-      let* _ = keyword "Gt" in
-      let* _ = keyword ";" in 
-      pure (Gt)
-
-   and parse_swap () : com parser = 
-      let* _ = keyword "Swap" in 
-      let* _ = keyword ";" in
-      pure (Swap)
-
-   and parse_ifelse () : com parser = 
-      let* _ = keyword "If" in 
-      let* c1 = many1' parse_com in
-      let* _ = keyword "Else" in 
-      let* c2 = many1' parse_com in
-      let* _ = keyword "End" in 
-      let* _ = keyword ";" in
-      pure (IfElse [c1; c2])
-
-   and parse_bind () : com parser = 
-      let* _ = keyword "Bind" in 
-      let* _ = keyword ";" in
-      pure (Bind)
-
-   and parse_lookup () : com parser = 
-      let* _ = keyword "Lookup" in 
-      let* _ = keyword ";" in
-      pure (Lookup)
-
-   and parse_fun () : com parser = 
-      let* _ = keyword "Fun" in 
-      let* cs = many1' parse_com in
-      let* _ = keyword "End" in 
-      let* _ = keyword ";" in
-      pure (Fun cs)
-
-   and parse_call () : com parser = 
-      let* _ = keyword "Call" in 
-      let* _ = keyword ";" in 
-      pure (Call)
-
-   and parse_return () : com parser = 
-      let* _ = keyword "Return" in 
-      let* _ = keyword ";" in 
-      pure (Return)
-
-(* remove blank chars at the front of a list *)
-let rec trim_list(cs: char list): char list =
-   match cs with
-   | [] -> cs
-   | '\n' :: cs -> trim_list cs
-   | '\t' :: cs -> trim_list cs
-   | '\r' :: cs -> trim_list cs
-   | ' ' :: cs -> trim_list cs
-   | _ -> cs
-;;
-
-let trim_string(cs: string): string = 
-   list_foldleft (trim_list (string_listize cs)) "" (fun acc c -> string_snoc acc c)
-;;
-
-
-let rec parse_input(s: string): com list option = 
-   (* remove leading whitespace *)
-   let s = trim_string s in 
-   if s = "" then Some([]) else
-   match string_parse(parse_com ()) s with 
-   |None -> None
-   |Some(e, []) -> Some([e])
-   |Some(e, rest) -> (* recurse to the next command *)
-      let res = parse_input(list_foldleft(rest)("")(fun acc c -> string_snoc acc c)) in 
-      match res with 
-      |Some(r) -> Some(e::r)
-      |None -> None
-;;
-
-let (++) = list_append;;
-
-let rec valueOf(x:string)(varenv: string list * value list): value option = 
-   match varenv with 
-   |(vars, vals) -> 
-      (match vars with 
-      |var::vars -> 
-         (match vals with 
-         |v::vals ->          
-         if var = x then Some(v) else (valueOf x (vars, vals))
-         |_ -> None)
-      |_ -> None)
-;;
-
-let rec compute(coms: com list)(stack: value list)(trace: string list)(varenv: string list * value list): string list = 
-   match coms with 
-   |[] -> trace (* base case *)
-   |com::coms -> (* recursive case; more coms to process *)
-      match com with 
-      |Push c -> compute coms (c::stack) trace varenv
-      |Pop -> 
-         (match stack with 
-         |c::stack -> compute coms stack trace varenv
-         |_ -> "Panic"::trace)
-      |Trace ->
-         (match stack with
-         |c::stack -> compute coms (Constant(Unit)::stack) (toString(c)::trace) varenv
-         |_ -> "Panic"::trace)
-      |Add ->
-         (match stack with 
-         |i::j::stack -> 
-            (match i with 
-            |Constant Int i -> 
-               (match j with 
-               |Constant Int j -> compute coms (Constant (Int(i+j))::stack) trace varenv
-               |_ -> "Panic"::trace) 
-            |_ -> "Panic"::trace)
-         |_ -> "Panic"::trace)
-      |Sub ->
-         (match stack with 
-         |i::j::stack -> 
-            (match i with 
-            |Constant Int i -> 
-               (match j with 
-               |Constant Int j -> compute coms (Constant(Int(i-j))::stack) trace varenv
-               |_ -> "Panic"::trace) 
-            |_ -> "Panic"::trace)
-         |_ -> "Panic"::trace)
-      |Mul ->
-         (match stack with 
-         |i::j::stack -> 
-            (match i with 
-            |Constant Int i -> 
-               (match j with 
-               |Constant Int j -> compute coms (Constant(Int(i*j))::stack) trace varenv
-               |_ -> "Panic"::trace) 
-            |_ -> "Panic"::trace)
-         |_ -> "Panic"::trace)
-      |Div ->
-         (match stack with 
-         |i::j::stack -> 
-            (match i with 
-            |Constant Int i -> 
-               (match j with 
-               |Constant Int j -> if j = 0 then ("Panic"::trace) else (compute coms (Constant(Int(i/j))::stack) trace varenv) 
-               |_ -> "Panic"::trace) 
-            |_ -> "Panic"::trace)
-         |_ -> "Panic"::trace)
-      |And ->
-         (match stack with 
-         |a::b::stack -> 
-            (match a with 
-            |Constant Bool a -> 
-               (match b with 
-               |Constant Bool b -> compute coms (Constant(Bool(a && b))::stack) trace varenv
-               |_ -> "Panic"::trace) 
-            |_ -> "Panic"::trace)
-         |_ -> "Panic"::trace)
-      |Or ->
-         (match stack with 
-         |a::b::stack -> 
-            (match a with 
-            |Constant Bool a -> 
-               (match b with 
-               |Constant Bool b -> compute coms (Constant(Bool(a || b))::stack) trace varenv
-               |_ -> "Panic"::trace) 
-            |_ -> "Panic"::trace)
-         |_ -> "Panic"::trace)
-      |Not ->
-         (match stack with 
-         |a::stack -> 
-            (match a with 
-            |Constant Bool a -> compute coms (Constant(Bool(!! a))::stack) trace varenv
-            |_ -> "Panic"::trace)
-         |_ -> "Panic"::trace)
-      |Lt ->
-         (match stack with 
-         |i::j::stack -> 
-            (match i with 
-            |Constant Int i -> 
-               (match j with 
-               |Constant Int j -> compute coms (Constant(Bool(i<j))::stack) trace varenv
-               |_ -> "Panic"::trace) 
-            |_ -> "Panic"::trace)
-         |_ -> "Panic"::trace)
-      |Gt ->
-         (match stack with 
-         |i::j::stack -> 
-            (match i with 
-            |Constant Int i -> 
-               (match j with 
-               |Constant Int j -> compute coms (Constant(Bool(i>j))::stack) trace varenv
-               |_ -> "Panic"::trace) 
-            |_ -> "Panic"::trace)
-         |_ -> "Panic"::trace)
-      |Swap -> 
-         (match stack with 
-         |c1::c2::stack -> compute coms (c2::c1::stack) trace varenv
-         |_ -> "Panic"::trace)
-      |IfElse cs -> 
-         (match stack with 
-         |b::stack -> 
-            (match b with 
-            |Constant Bool b -> 
-               (match cs with 
-               |c1::c2::[] -> if b then compute (c1++coms) stack trace varenv else compute (c2++coms) stack trace varenv
-               |_ -> "Panic"::trace)
-            |_ -> "Panic"::trace)
-         |_ -> "Panic"::trace)
-      |Bind -> 
-         (match stack with 
-         |x::v::stack -> 
-            (match x with 
-            |Symbol x -> 
-               (match varenv with 
-               |(vars, vals) -> compute coms stack trace ((x::vars), (v::vals)))
-            |_ -> "Panic"::trace)
-         |_ -> "Panic"::trace)
-      |Lookup -> 
-         (match stack with 
-         |x::stack -> 
-            (match x with 
-            |Symbol x -> 
-               (match valueOf x varenv with 
-               |Some v -> compute coms (v::stack) trace varenv
-               |_ -> "Panic"::trace)
-            |_ -> "Panic"::trace)
-         |_ -> "Panic"::trace)
-      |Fun cs -> 
-         (match stack with 
-         |x::stack -> 
-            (match x with 
-            |Symbol x -> 
-               compute coms (Closure (x, varenv, cs)::stack) trace varenv
-            |_ -> "Panic"::trace)
-         |_ -> "Panic"::trace)
-      |Call ->
-         (match stack with
-         |Closure (cname, cvarenv, ccoms) :: a :: stack -> 
-            (match varenv with 
-            |(vars, vals) -> compute ccoms (a::Closure ("cc", varenv, coms)::stack) trace (cname::vars, Closure (cname, cvarenv, ccoms)::vals))
-         |_ -> "Panic"::trace)
-      |Return -> 
-         (match stack with 
-         |Closure (ccname, cvarenv, ccoms) :: a :: stack -> compute ccoms (a::stack) trace cvarenv
-         |_ -> "Panic"::trace)
-;;
-
-let interp (s : string) : string list option  = (* YOUR CODE *)
-   (*
-   parse input to create a list of commands; return None if parsing fails
-   otherwise, perform the commands   
-   *)
-   match parse_input(s) with 
-   |None -> None 
-   |Some(coms) -> 
-      Some(compute coms [] [] ([], []))
-;;
-
-(* ------------------------------------------------------------ *)
-
-(* interp from file *)
-(* copied from interp1 solution *)
-
-let read_file (fname : string) : string =
-   let fp = open_in fname in
-   let s = string_make_fwork (fun work ->
-       try
-         while true do
-           work (input_char fp)
-         done
-       with _ -> ())
-   in
-   close_in fp; s
+    match character_grabber ls with
+    | Some (charList, rest) ->
+      Some (list_foldleft charList "" (fun acc c -> acc ^ char_escaped c), rest)
+    | None -> None
+let parse_symbol =
+  let* n = parse_string << whitespaces in pure (Symbol n)
  
- let interp_file (fname : string) : string list option =
-   let src = read_file fname in
-   interp src
+let parse_const =
+  parse_int <|>
+  parse_bool <|>
+  parse_unit <|>
+  parse_symbol
  
+let rec parse_com ()= 
+  (keyword "Push" >> parse_const >>= fun c -> pure (Push c)) <|>
+  (keyword "Pop" >> pure Pop) <|>
+  (keyword "Trace" >> pure Trace) <|>
+  (keyword "Add" >> pure Add) <|>
+  (keyword "Sub" >> pure Sub) <|>
+  (keyword "Mul" >> pure Mul) <|>
+  (keyword "Div" >> pure Div) <|>
+  (keyword "And" >> pure And) <|>
+  (keyword "Or" >> pure Or) <|>
+  (keyword "Not" >> pure Not) <|>
+  (keyword "Lt" >> pure Lt) <|>
+  (keyword "Gt" >> pure Gt) <|>
+  (keyword "Swap" >> pure Swap) <|>
+  (keyword "Bind" >> pure Bind) <|>
+  (keyword "Lookup" >> pure Lookup) <|>
+  (keyword "Return" >> pure Return) <|>
+  (keyword "Call" >> pure Call) <|>
+  (parse_if())  <|>
+  (parse_fun())
+and parse_if () =
+  let* _ = keyword "If" in
+  let* c1 = parse_coms () in
+  let* _ = keyword "Else" in
+  let* c2 = parse_coms () in
+  let* _ = keyword "End" in
+  pure(If (c1, c2))
+and parse_fun () =
+  let* _ = keyword "Fun" in
+  let* c1 = parse_coms() in
+  let* _ = keyword "End" in
+  pure(Fun(c1))
+and parse_coms() = many' (fun x -> parse_com x << keyword ";")
+ 
+
+let rec str_of_nat (n : int) : string =
+   let d = n mod 10 in 
+   let n0 = n / 10 in
+   let s = str (chr (d + ord '0')) in 
+   if 0 < n0 then
+     string_append (str_of_nat n0) s
+   else s
+ 
+let str_of_int (n : int) : string = 
+   if n < 0 then
+     string_append "-" (str_of_nat (-n))
+   else str_of_nat n
+ 
+let toString (c : const) : string =
+   match c with
+   | Int i -> str_of_int i
+   | Bool true -> "True"
+   | Bool false -> "False"
+   | Unit -> "Unit"
+   | Symbol s -> s
+   | Closure (s, v, p) -> 
+      let s1 = string_append ("Fun<") (s) in
+      string_append (s1) (">")
+
+let rec lookup_helper(s : string)(v : env) : const option =
+  match v with
+  | (str, value) :: rest when (str = s) -> Some value
+  | (str, value) :: rest when (str != s) -> lookup_helper s rest
+  | _ -> None 
+let rec eval (s : stack) (t : trace) (v: env) (p : prog) : trace =
+  match p with
+  | [] -> t
+  | Push c :: p0 -> eval (c :: s) t v p0
+  | Pop :: p0 ->
+    (match s with
+    | _ :: s0 -> eval s0 t v p0
+    | [] -> eval [] ("Panic" :: t) v [])
+  | Swap :: p0 ->
+    (match s with
+    | c1 :: c2 :: s0 -> eval (c2 :: c1 :: s0) t v p0
+    | [] -> eval [] ("Panic" :: t) v []
+    | _ :: [] -> eval [] ("Panic" :: t) v [])
+  | Trace :: p0 ->
+    (match s with
+    | c :: s0 -> eval (Unit :: s0) (toString c :: t) v p0
+    | [] -> eval [] ("Panic" :: t) v [])
+  | Add :: p0 ->
+    (match s with
+    | Int i :: Int j :: s0 -> eval (Int (i + j) :: s0) t v p0
+    | _ :: _ :: s0 -> eval [] ("Panic" :: t) v []
+    | [] -> eval [] ("Panic" :: t) v []
+    | _ :: [] -> eval [] ("Panic" :: t) v [])
+  | Sub :: p0 ->
+    (match s with
+    | Int i :: Int j :: s0 -> eval (Int (i - j) :: s0) t v p0
+    | _ :: _ :: s0 -> eval [] ("Panic" :: t) v []
+    | [] -> eval [] ("Panic" :: t) v []
+    | _ :: []  -> eval [] ("Panic" :: t) v [])
+  | Mul :: p0 ->
+    (match s with
+    | Int i :: Int j :: s0 -> eval (Int (i * j) :: s0) t v p0 
+    | _ :: _ :: s0 -> eval [] ("Panic" :: t) v []
+    | [] -> eval [] ("Panic" :: t) v []
+    | _ :: [] -> eval [] ("Panic" :: t) v [])
+  | Div :: p0 ->
+    (match s with
+    | Int i :: Int 0 :: s0 -> eval [] ("Panic" :: t) v []
+    | Int i :: Int j :: s0 -> eval (Int (i / j) :: s0) t v p0
+    | _ :: _ :: s0 -> eval [] ("Panic" :: t) v []
+    | [] -> eval [] ("Panic" :: t) v []
+    | _ :: [] -> eval [] ("Panic" :: t) v [])
+  | And :: p0 ->
+    (match s with
+    | Bool a :: Bool b :: s0 -> eval (Bool (a && b) :: s0) t v p0
+    | _ :: _ :: s0 -> eval [] ("Panic" :: t) v []
+    | [] -> eval [] ("Panic" :: t) v []
+    | _ :: [] -> eval [] ("Panic" :: t) v [])
+  | Or :: p0 ->
+    (match s with
+    | Bool a :: Bool b :: s0 -> eval (Bool (a || b) :: s0) t v p0
+    | _ :: _ :: s0 -> eval [] ("Panic" :: t) v []
+    | [] -> eval [] ("Panic" :: t) v []
+    | _ :: [] -> eval [] ("Panic" :: t) v [])
+  | Not :: p0 ->
+    (match s with
+    | Bool a :: s0 -> eval (Bool (not a) :: s0) t v p0
+    | _ :: s0 -> eval [] ("Panic" :: t) v []
+    | [] -> eval [] ("Panic" :: t) v [])
+  | Lt :: p0 ->
+    (match s with
+    | Int i :: Int j :: s0 -> eval (Bool (i < j) :: s0) t v p0
+    | _ :: _ :: s0 -> eval [] ("Panic" :: t) v []
+    | [] -> eval [] ("Panic" :: t) v []
+    | _ :: [] -> eval [] ("Panic" :: t) v [])
+  | Gt :: p0 ->
+    (match s with
+    | Int i :: Int j :: s0 -> eval (Bool (i > j) :: s0) t v p0
+    | _ :: _ :: s0 -> eval [] ("Panic" :: t) v []
+    | [] -> eval [] ("Panic" :: t) v []
+    | _ :: [] -> eval [] ("Panic" :: t) v [])
+  | If(c1, c2) :: p0 ->
+    (match s with
+    | Bool b :: rest  (*If Else*)->
+      if (b = true) then
+        eval rest t v (list_append c1 p0)
+      else 
+        eval rest t v (list_append c2 p0)
+    | _ :: rest -> eval [] ("Panic" :: t) v []
+    | [] -> eval [] ("Panic" :: t) v [])
+    | Bind :: p0 ->
+      (match s with
+      | Symbol x :: constant :: s0 -> eval s0 t ((x,constant) :: v) p0
+      | _ :: _ :: s0 -> eval [] ("Panic" :: t) v []
+      | [] -> eval [] ("Panic" :: t) v []
+      | _ :: [] -> eval [] ("Panic" :: t) v [])
+  | Lookup :: p0 ->
+    (match s with
+      | Symbol x :: s0 -> 
+        (match lookup_helper x v with
+        | Some constant -> eval (constant :: s0) t v p0
+        | _ -> eval [] ("Panic" :: t) v []
+        )
+      | _ :: s0 -> eval [] ("Panic" :: t) v []
+      | [] -> eval [] ("Panic" :: t) v [])
+      | Fun c :: p0 ->
+         (match s with
+         | Symbol x :: s0 -> eval (Closure(x, v, c) :: s0) t v p0
+         | _ :: _ :: s0 -> eval [] ("Panic" :: t) v []
+         | [] -> eval [] ("Panic" :: t) v []
+         | _ :: [] -> eval [] ("Panic" :: t) v [])
+| Call :: p0 ->
+   (match s with
+   | Closure (f, vf, c) :: a :: s0 ->
+      let new_env = ((f, Closure (f, vf, c)) :: vf) in
+      let cc_closure = Closure ("cc", v, p0) in
+      eval (a :: cc_closure :: s0) (t) (new_env) (c)
+   | _ :: _ :: s0 -> eval [] ("Panic" :: t) v []
+   | [] -> eval [] ("Panic" :: t) v []
+   | _ :: [] -> eval [] ("Panic" :: t) v [])
+  | Return :: p0 -> 
+    (match s with
+    | Closure (f, vf, c) :: a :: s0 -> eval (a :: s0) (t) (vf) (c)
+    | _ -> eval ([]) ("Panic" :: t) (v) ([]))
+    
+
+let interp (s : string) : string list option =
+  match string_parse (whitespaces >> parse_coms()) s with
+  | Some (p, []) -> Some (eval [] [] [] p)
+  | _ -> None
+
+(* My Tester *)
+let test () =
+   let test_program = 
+   "" (* Placeholder for test input string *)
+   in match interp test_program with
+      | Some trace -> List.iter print_endline trace
+      | None -> print_endline "Program failed to interpret"
+ 
+ let _ = test()
