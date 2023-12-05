@@ -142,6 +142,9 @@ let interp (s: string) : string list option =
     | (var, value) :: v0 -> if x = var then Some(value) else lookup x v0
     | [] -> None
   in
+  match string_parse_c (parse_prog) s with 
+  | Some (e, []) -> Some(eval([])([])([])(e)) 
+  | _ -> None 
 let rec eval(s : const list) (t : string list) (v : (const * const) list) (p : com list) : string list =
     match p with
     (* termination state returns the trace *)
@@ -257,6 +260,3 @@ let rec eval(s : const list) (t : string list) (v : (const * const) list) (p : c
         | []                  ->                eval [] ("Panic" :: t) v []    
       )
     in
-	match string_parse_c (parse_prog) s with 
-	| Some (e, []) -> Some(eval([])([])([])(e)) 
-	| _ -> None 
