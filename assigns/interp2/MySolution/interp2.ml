@@ -32,7 +32,7 @@ and com =
 let symbol : string parser =
    fun ls ->
      match many1 (satisfy (fun c -> char_islower c || char_isdigit c)) ls with
-     | Some (xs, ls') -> Some (list_foldleft xs "" (fun acc n -> string_append acc (str n)), ls')
+     | Some (xs, ls') -> Some (list_foldleft(xs)("") (fun acc n -> string_append(acc)(str n)), ls')
      | None -> None
  
 let parse_const = 
@@ -131,7 +131,7 @@ let rec parse_com() =
   (keyword "Return" >> pure Return) 
   
 
-let parse_prog = many (parse_com() << keyword ";")
+let parse_prg = many (parse_com() << keyword ";")
 
 let string_parse_c(p: 'a parser)(s: string) =
   p(string_listize(s))
@@ -143,7 +143,7 @@ let interp (s: string) : string list option =
     | [] -> None
   in
 
-  
+
 
 let rec eval(s : const list) (t : string list) (v : (const * const) list) (p : com list) : string list =
     match p with
@@ -260,6 +260,7 @@ let rec eval(s : const list) (t : string list) (v : (const * const) list) (p : c
         | []                  ->                eval [] ("Panic" :: t) v []    
       )
     in
-	match string_parse_c (parse_prog) s with 
+	match string_parse_c (parse_prg) s with 
 	| Some (e, []) -> Some(eval([])([])([])(e)) 
-	| _ -> None 
+	| _ -> None
+;;
