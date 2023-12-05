@@ -9,30 +9,7 @@ Notes:
 1. You are only allowed to use library functions defined in MyOCaml.ml
    or ones you implement yourself.
 2. You may NOT use OCaml standard library functions directly.
-
 *)
-
-(* let interp (s : string) : string list option =  *)
-
-
-(* <foo, V, C> *)
-(* let y = 4 in fun x -> x + y *)
-(* <???, y->4 :: e, x+y *)
-
-(* Fun C End;
-Call;
-Return; *)
-
-(* <f, V, C> goes on the stack? am confused *)
-
-(* [         f :: S | T | V] Fun C End; P
-[ <f, V, C> :: S | T | V] P
-
-
-[ < f, V_f, C> :: a :: S | T | V   ]  Call; P
-[ a :: <cc, V, P>   :: S | T | V_f ]  C
-
-continuation passing style? *)
 
 
 type const = 
@@ -40,7 +17,6 @@ type const =
 | Bool of bool
 | Unit
 | Sym of string
-(* | Closure of string*(string*const)list*(com list) *)
 | Closure of const*(const*const)list*(com list)
 
 and com =
@@ -51,7 +27,7 @@ and com =
   | IfElse of com list*com list
   | Bind | Lookup
   | Fun of com list | Call | Return
-(* and coms = com list *)
+
 
 let symbol : string parser =
    fun ls ->
