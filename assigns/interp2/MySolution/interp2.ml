@@ -282,7 +282,6 @@ let interp (s: string) : string list option =
         | []                  ->                eval [] ("Panic" :: t) v []    
       )
     in
-    let parse_and_eval s =
-      match string_parse_c parse_prg s with
-      | Some (e, []) -> Some (eval [] [] [] e)
-      | _ -> None
+	 match string_parse_c (parse_prg) s with 
+	| Some (e, []) -> Some(eval([])([])([])(e)) 
+	| _ -> None  
