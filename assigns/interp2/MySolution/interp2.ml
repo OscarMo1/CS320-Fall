@@ -242,7 +242,7 @@ let interp (s: string) : string list option =
        | _ :: []              (* GtError3 *) -> eval [] ("Panic" :: t) v [])
     | IfElse (c1, c2) :: p0 ->       
       (match s with 
-        | Bool b :: s0 -> if b  then        eval s0 t v (list_append c1 p0) else evaluate s0 t v (list_append c2 p0)
+        | Bool b :: s0 -> if b  then        eval s0 t v (list_append c1 p0) else eval s0 t v (list_append c2 p0)
         | _ :: s0      ->                   eval [] ("Panic" :: t) v []
         | []           ->                   eval [] ("Panic" :: t) v []
       )
