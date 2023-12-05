@@ -137,9 +137,9 @@ let string_parse_c(p: 'a parser)(s: string) =
   p(string_listize(s))
 
 let interp (s: string) : string list option = 
-  let rec lookup (x : const) (v : (const * const) list) : const option = 
+  let rec scan (x : const) (v : (const * const) list) : const option = 
     match v with
-    | (var, value) :: v0 -> if x = var then Some(value) else lookup x v0
+    | (var, value) :: v0 -> if x = var then Some(value) else scan x v0
     | [] -> None
   in
 
@@ -233,7 +233,7 @@ let rec eval(s : const list) (t : string list) (v : (const * const) list) (p : c
       )
     | Lookup :: p0 -> 
       (match s with 
-        | Sym x :: s0 ->  (match (lookup (Sym(x)) v) with
+        | Sym x :: s0 ->  (match (scan (Sym(x)) v) with
           | Some (value) ->                eval (value :: s0) t v p0 
           | None         ->                eval [] ("Panic" :: t) v [])
         | _ :: s0        ->                eval [] ("Panic" :: t) v []
