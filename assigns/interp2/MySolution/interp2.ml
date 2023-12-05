@@ -1,3 +1,4 @@
+
 #use "./../../../classlib/OCaml/MyOCaml.ml";;
 
 (*
@@ -27,7 +28,6 @@ and com =
   | IfElse of com list*com list
   | Bind | Lookup
   | Fun of com list | Call | Return
-
 
 let symbol : string parser =
    fun ls ->
@@ -59,12 +59,12 @@ let rec array_len(xs: 'a list): int =
 		acc + 1)
 
 
-let num_length(x: int): int =
-   let rec num_length_helper(x: int)(count: int): int =
-      if x < 10 then count + 1
-      else num_length_helper (x / 10) (count + 1)
-   in
-   num_length_helper x 0
+      let num_length(x: int): int =
+      let rec num_length_helper(x: int)(count: int): int =
+         if x < 10 then count + 1
+         else num_length_helper (x / 10) (count + 1)
+      in
+      num_length_helper x 0
    ;;
        
        
@@ -95,13 +95,12 @@ let num_length(x: int): int =
 let const_to_string(const): string = 
 match const with
 | Int n -> int2str n
-| Bool true -> "True"
-| Bool false -> "False"
+| Bool b -> if b then "True" else "False"
 | Unit -> "Unit"
 | Sym str -> str
 | Closure (Sym str, _, _) -> string_append (string_append "Fun<" str) (">")
 
-let rec parse_command() = 
+let rec parse_com() = 
   (keyword "Push" >> parse_const >>= fun c -> pure (Push c)) <|>
   (keyword "Pop" >> pure Pop) <|>
   (keyword "Swap" >> pure Swap) <|>
@@ -132,7 +131,7 @@ let rec parse_command() =
   (keyword "Return" >> pure Return) 
   
 
-let parse_prg = many (parse_command() << keyword ";")
+let parse_prog = many (parse_com() << keyword ";")
 
 let string_parse_c(p: 'a parser)(s: string) =
   p(string_listize(s))
@@ -258,6 +257,6 @@ let interp (s: string) : string list option =
         | []                  ->                eval [] ("Panic" :: t) v []    
       )
     in
-	 match string_parse_c (parse_prg) s with 
+	match string_parse_c (parse_prog) s with 
 	| Some (e, []) -> Some(eval([])([])([])(e)) 
-	| _ -> None  
+	| _ -> None 
