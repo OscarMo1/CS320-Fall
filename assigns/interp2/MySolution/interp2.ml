@@ -83,12 +83,12 @@ let rec array_len(xs: 'a list): int =
 		acc + 1)
 
 
-      let num_length(x: int): int =
-      let rec num_length_helper(x: int)(count: int): int =
-         if x < 10 then count + 1
-         else num_length_helper (x / 10) (count + 1)
-      in
-      num_length_helper x 0
+let num_length(x: int): int =
+   let rec num_length_helper(x: int)(count: int): int =
+      if x < 10 then count + 1
+      else num_length_helper (x / 10) (count + 1)
+   in
+   num_length_helper x 0
    ;;
        
        
@@ -125,38 +125,39 @@ match const with
 | Sym str -> str
 | Closure (Sym str, _, _) -> string_append (string_append "Fun<" str) (">")
 
-let rec parse_com() = 
-  (keyword "Push" >> parse_const >>= fun c -> pure (Push c)) <|>
-  (keyword "Pop" >> pure Pop) <|>
-  (keyword "Swap" >> pure Swap) <|>
-  (keyword "Trace" >> pure Trace) <|>
-  (keyword "Add" >> pure Add) <|>
-  (keyword "Sub" >> pure Sub) <|>
-  (keyword "Mul" >> pure Mul) <|>
-  (keyword "Div" >> pure Div) <|>
-  (keyword "And" >> pure And) <|>
-  (keyword "Or" >> pure Or) <|>
-  (keyword "Not" >> pure Not) <|>
-  (keyword "Lt" >> pure Lt) <|>
-  (keyword "Gt" >> pure Gt) <|>
-  (fun ls -> 
-    let@ (_, ls) = keyword "If" (ls) in 
-    let@ (c1, ls) = many (parse_com() << keyword ";" ) (ls) in
-    let@ (_, ls) = keyword "Else" (ls) in
-    let@ (c2, ls) = many (parse_com() << keyword ";") (ls) in
-    let@ (_, ls) = keyword "End" (ls) in 
-    pure (IfElse (c1, c2) )(ls))  <|>
-  (keyword "Bind" >> pure Bind) <|> 
-  (keyword "Lookup" >> pure Lookup) <|>
-  (let* _ = keyword "Fun" in
-   let* c = many (parse_com() << keyword ";")  in
-   let* _ = keyword "End" in
-   pure (Fun c)) <|>
-  (keyword "Call" >> pure Call)  <|>
-  (keyword "Return" >> pure Return) 
-  
-
-let parse_prog = many (parse_com() << keyword ";")
+let rec parse_prog () =
+   (keyword "Push" >> parse_const >>= fun c -> pure (Push c)) <|>
+   (keyword "Pop" >> pure Pop) <|>
+   (keyword "Swap" >> pure Swap) <|>
+   (keyword "Trace" >> pure Trace) <|>
+   (keyword "Add" >> pure Add) <|>
+   (keyword "Sub" >> pure Sub) <|>
+   (keyword "Mul" >> pure Mul) <|>
+   (keyword "Div" >> pure Div) <|>
+   (keyword "And" >> pure And) <|>
+   (keyword "Or" >> pure Or) <|>
+   (keyword "Not" >> pure Not) <|>
+   (keyword "Lt" >> pure Lt) <|>
+   (keyword "Gt" >> pure Gt) <|>
+   (fun ls -> 
+     let@ (_, ls) = keyword "If" (ls) in 
+     let@ (c1, ls) = many (parse_prog () << keyword ";" ) (ls) in
+     let@ (_, ls) = keyword "Else" (ls) in
+     let@ (c2, ls) = many (parse_prog () << keyword ";") (ls) in
+     let@ (_, ls) = keyword "End" (ls) in 
+     pure (IfElse (c1, c2) )(ls))  <|>
+   (keyword "Bind" >> pure Bind) <|> 
+   (keyword "Lookup" >> pure Lookup) <|>
+   (let* _ = keyword "Fun" in
+    let* c = many (parse_prog () << keyword ";")  in
+    let* _ = keyword "End" in
+    pure (Fun c)) <|>
+   (keyword "Call" >> pure Call)  <|>
+   (keyword "Return" >> pure Return)  <|>
+   (many (parse_prog () << keyword ";") >>= fun prog -> pure (Prog prog))
+ 
+ let parse_prog = parse_prog ()
+ 
 
 let string_parse_c(p: 'a parser)(s: string) =
   p(string_listize(s))
