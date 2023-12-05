@@ -143,7 +143,7 @@ let interp (s: string) : string list option =
     | [] -> None
   in
 
-  let rec eval(s : const list) (t : string list) (v : (const * const) list) (p : com list) : string list =
+let rec eval(s : const list) (t : string list) (v : (const * const) list) (p : com list) : string list =
     match p with
     (* termination state returns the trace *)
     | [] -> t
