@@ -362,7 +362,7 @@ let int2str(i0: int): string =
 let compile (s : string) : string = 
   let push_expression(expr) string =
     match expr with
-    | Int n -> string_of_int n
+    | Int n -> int2str n
     | Bool b -> if b then "True" else "False"
     | var s -> s
     | Unit _ -> "Unit"
