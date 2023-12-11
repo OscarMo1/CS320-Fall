@@ -328,4 +328,72 @@ let parse_prog (s : string) : expr =
   | Some (m, []) -> scope_expr m
   | _ -> raise SyntaxError
 
+
+(* compile helper functions *)
+
+let rec str_of_nat (n : int) : string =
+  let d = n mod 10 in 
+  let n0 = n / 10 in
+  let s = str (chr (d + ord '0')) in 
+  if 0 < n0 then
+    string_append (str_of_nat n0) s
+  else s
+let str_of_int (n : int) : string = 
+  if n < 0 then
+    string_append "-" (str_of_nat (-n))
+  else str_of_nat n
+
 let compile (s : string) : string = (* YOUR CODE *)
+  let push_expr(expr): string = 
+    match expr with
+    | Int n -> str_of_int n
+    | Bool true -> "True"
+    | Bool false -> "False"
+    | Var s -> s
+    | Unit -> "Unit"
+  in 
+
+  let rec compiler_helper (e : expr) : string = 
+    match e with 
+    | Int i           -> string_concat_list ["Push "; (push_expr(e)); ";"]
+    | Bool b          -> string_concat_list ["Push "; (push_expr(e)); ";"]
+    | Unit            -> string_concat_list ["Push "; (push_expr(e)); ";"]
+    | UOpr (opr, m)   -> (match (opr, m) with 
+                          | (Neg, m) -> string_concat_list [compiler_helper(m); "Push -1;"; "Mul;"]
+                          | (Not, Bool true) -> "Push False;"
+                          | (Not, Bool false) -> "Push True;")
+    | BOpr(opr, m, n)  -> (match opr with
+                          | Add -> string_concat_list [compiler_helper(m); compiler_helper(n); "Swap; "; "Add; "]
+                          | Sub -> string_concat_list [compiler_helper(m); compiler_helper(n); "Swap; "; "Sub; "]
+                          | Mul -> string_concat_list [compiler_helper(m); compiler_helper(n); "Swap; "; "Mul; "]
+                          | Div -> string_concat_list [compiler_helper(m); compiler_helper(n); "Swap; "; "Div; "]
+                          | Mod -> string_concat_list [compiler_helper(m); compiler_helper(n); compiler_helper(m); compiler_helper(n); "Swap; "; "Div; "; "Swap; "; "Mul; "; "Swap; "; "Sub; "]
+                          | And -> string_concat_list [compiler_helper(m); compiler_helper(n); "Swap; "; "And; "]
+                          | Or -> string_concat_list [compiler_helper(m); compiler_helper(n); "Swap; "; "Or; "]
+                          | Lt -> string_concat_list [compiler_helper(m); compiler_helper(n); "Swap; "; "Lt; "]
+                          | Gt -> string_concat_list [compiler_helper(m); compiler_helper(n); "Swap; "; "Gt; "]
+
+                          | Lte -> string_concat_list [compiler_helper(m); compiler_helper(n); "Swap; "; "Gt; "; "Not; "]
+                          | Gte -> string_concat_list [compiler_helper(m); compiler_helper(n); "Swap; "; "Lt; "; "Not; "]
+                          | Eq -> string_concat_list [compiler_helper(m); compiler_helper(n); "Swap; "; "Lt; "; compiler_helper(m); compiler_helper(n); "Swap; "; "Gt; "; "Or; Not;"; ]
+    )
+    | Var s           -> string_concat_list ["Push "; s; ";"; "Lookup;"]
+    | Fun (f, x, m)   -> (let body = (match m with 
+                          | Ifte (m, n1, n2) -> string_concat_list [compiler_helper(m); "If "; compiler_helper(n1); "Swap; "; "Return; "; "Else "; compiler_helper(n2);"Swap; "; "Return; End; "]
+                          | _              -> string_concat_list [compiler_helper(m); "Swap;"; "Return;";])
+                        in 
+                        string_concat_list ["Push "; f; ";"; "Fun "; "Push "; x; ";"; "Bind;"; body;"End;"]
+    )
+    | App (m, n)      -> string_concat_list [compiler_helper(m); compiler_helper(n); "Swap;"; "Call;"]
+    | Let (x, m, n)   -> (match m with
+                          | Fun _ -> string_concat_list [(compiler_helper(m)); "Push "; x; ";"; "Bind;"; compiler_helper(n)]
+                          | _     -> string_concat_list ["Push "; x; ";"; compiler_helper(m); "Swap;"; "Bind;"; compiler_helper(n)])
+    | Seq (m, n)      -> (match m with 
+                          | Trace x -> string_concat_list [compiler_helper(x); "Trace;"; "Pop;"; (compiler_helper(n))]
+                          | _ ->       string_concat_list [compiler_helper(m); (compiler_helper(n))]
+    )
+    | Ifte(m, n1, n2) -> string_concat_list [compiler_helper(m); "If "; compiler_helper(n1); "Else "; compiler_helper(n2); "End; "]
+    | Trace m         -> string_concat_list [compiler_helper(m); "Trace;"]
+  in 
+  (* match parse_prog s with  match expr with *)
+  compiler_helper (parse_prog s);;
