@@ -336,7 +336,7 @@ let rec str_of_nat (n : int) : string =
   if 0 < n0 then
     string_append (str_of_nat n0) s
   else s
-  
+
 let str_of_int (n : int) : string = 
   if n < 0 then
     string_append "-" (str_of_nat (-n))
@@ -395,4 +395,4 @@ let compile (s : string) : string =
     | Trace m         -> string_concat_list [rec_compile(m); "Trace;"]
   in 
   (* match parse_prog s with  match expr with *)
-  compiler_helper (parse_prog s);;
+  rec_compile(parse_prog s);;
