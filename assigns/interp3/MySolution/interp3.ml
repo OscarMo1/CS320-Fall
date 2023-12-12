@@ -329,8 +329,11 @@ let parse_prog (s : string) : expr =
   | _ -> raise SyntaxError
 
 
-let compile (s : string) : string = (* YOUR CODE *)
-  let push_expr(expr): string = 
+
+
+
+let compile (s : string) : string =
+  let push_expression(expr): string = 
     match expr with
     | Int n -> str_of_int n
     | Bool b -> if b then "True" else "False"
@@ -340,9 +343,9 @@ let compile (s : string) : string = (* YOUR CODE *)
 
   let rec compiler_helper (e : expr) : string = 
     match e with 
-    | Int i           -> string_concat_list ["Push "; (push_expr(e)); ";"]
-    | Bool b          -> string_concat_list ["Push "; (push_expr(e)); ";"]
-    | Unit            -> string_concat_list ["Push "; (push_expr(e)); ";"]
+    | Int i           -> string_concat_list ["Push "; (push_expression(e)); ";"]
+    | Bool b          -> string_concat_list ["Push "; (push_expression(e)); ";"]
+    | Unit            -> string_concat_list ["Push "; (push_expression(e)); ";"]
     | UOpr (opr, m)   -> (match (opr, m) with 
                           | (Neg, m) -> string_concat_list [compiler_helper(m); "Push -1;"; "Mul;"]
                           | (Not, Bool true) -> "Push False;"
