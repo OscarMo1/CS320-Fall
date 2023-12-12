@@ -391,28 +391,23 @@ let compile (s : string) : string =
                           | Or -> string_concat_list [rec_compile(m); rec_compile(n); "Swap; "; "Or; "]
                           | Lt -> string_concat_list [rec_compile(m); rec_compile(n); "Swap; "; "Lt; "]
                           | Gt -> string_concat_list [rec_compile(m); rec_compile(n); "Swap; "; "Gt; "]
-
                           | Lte -> string_concat_list [rec_compile(m); rec_compile(n); "Swap; "; "Gt; "; "Not; "]
                           | Gte -> string_concat_list [rec_compile(m); rec_compile(n); "Swap; "; "Lt; "; "Not; "]
-                          | Eq -> string_concat_list [rec_compile(m); rec_compile(n); "Swap; "; "Lt; "; rec_compile(m); rec_compile(n); "Swap; "; "Gt; "; "Or; Not;"; ]
-    )
+                          | Eq -> string_concat_list [rec_compile(m); rec_compile(n); "Swap; "; "Lt; "; rec_compile(m); rec_compile(n); "Swap; "; "Gt; "; "Or; Not;"; ])
     | Var s           -> string_concat_list ["Push "; s; ";"; "Lookup;"]
     | Fun (f, x, m)   -> (let body = (match m with 
                           | Ifte (m, n1, n2) -> string_concat_list [rec_compile(m); "If "; rec_compile(n1); "Swap; "; "Return; "; "Else "; rec_compile(n2);"Swap; "; "Return; End; "]
                           | _              -> string_concat_list [rec_compile(m); "Swap;"; "Return;";])
                         in 
-                        string_concat_list ["Push "; f; ";"; "Fun "; "Push "; x; ";"; "Bind;"; body;"End;"]
-    )
+                        string_concat_list ["Push "; f; ";"; "Fun "; "Push "; x; ";"; "Bind;"; body;"End;"])
     | App (m, n)      -> string_concat_list [rec_compile(m); rec_compile(n); "Swap;"; "Call;"]
     | Let (x, m, n)   -> (match m with
                           | Fun _ -> string_concat_list [(rec_compile(m)); "Push "; x; ";"; "Bind;"; rec_compile(n)]
                           | _     -> string_concat_list ["Push "; x; ";"; rec_compile(m); "Swap;"; "Bind;"; rec_compile(n)])
     | Seq (m, n)      -> (match m with 
                           | Trace x -> string_concat_list [rec_compile(x); "Trace;"; "Pop;"; (rec_compile(n))]
-                          | _ ->       string_concat_list [rec_compile(m); (rec_compile(n))]
-    )
+                          | _ ->       string_concat_list [rec_compile(m); (rec_compile(n))])
     | Ifte(m, n1, n2) -> string_concat_list [rec_compile(m); "If "; rec_compile(n1); "Else "; rec_compile(n2); "End; "]
     | Trace m         -> string_concat_list [rec_compile(m); "Trace;"]
   in 
-  (* match parse_prog s with  match expr with *)
   rec_compile(parse_prog s);;
