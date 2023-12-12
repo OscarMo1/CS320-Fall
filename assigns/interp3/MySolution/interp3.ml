@@ -328,51 +328,35 @@ let parse_prog (s : string) : expr =
   | Some (m, []) -> scope_expr m
   | _ -> raise SyntaxError
 
-let num_length(x: int): int =
-  let rec num_length_helper(x: int)(count: int): int =
-    if x < 10 then count + 1
-    else num_length_helper (x / 10) (count + 1)
-  in
-  num_length_helper x 0
-;;
 
-let int2str(i0: int): string =
-  (*get_digit returns the individual digit at specified index of number*)
-  let getDigit(x: int): int =
-  let rec getDigitHelper(x: int)(result: int): int =
-    if x = 0 then result
-    else getDigitHelper (x - 1) (result * 10)
-  in
-  getDigitHelper x 1 in
-  
-  let length = num_length (abs i0) in
-  let isNeg = i0 < 0 in
-  (*create string with length based on length and isNeg*)
-  string_init (length + (if isNeg then 1 else 0))
-  (* lambda function that calls index of the value of int and turns into string*)
-  (fun i -> 
-    if i = 0 && isNeg then '-'
-    else
-      let index = length - (if isNeg then (i - 1) else i) - 1 in
-      let digit = abs (i0 / getDigit index) mod 10
-    in
-    chr(ord '0' + digit)
-    );;
+(* compile helper functions *)
 
-let compile (s : string) : string = 
-  let push_expression(expr) string =
+let rec str_of_nat (n : int) : string =
+  let d = n mod 10 in 
+  let n0 = n / 10 in
+  let s = str (chr (d + ord '0')) in 
+  if 0 < n0 then
+    string_append (str_of_nat n0) s
+  else s
+let str_of_int (n : int) : string = 
+  if n < 0 then
+    string_append "-" (str_of_nat (-n))
+  else str_of_nat n
+
+let compile (s : string) : string = (* YOUR CODE *)
+  let push_expr(expr): string = 
     match expr with
-    | Int n -> int2str n
+    | Int n -> str_of_int n
     | Bool b -> if b then "True" else "False"
-    | var s -> s
-    | Unit _ -> "Unit"
-  in
+    | Var s -> s
+    | Unit -> "Unit"
+  in 
 
-let rec compiler_helper (e : expr) : string = 
+  let rec compiler_helper (e : expr) : string = 
     match e with 
-    | Int i           -> string_concat_list ["Push "; (push_expression(e)); ";"]
-    | Bool b          -> string_concat_list ["Push "; (push_expression(e)); ";"]
-    | Unit            -> string_concat_list ["Push "; (push_expression(e)); ";"]
+    | Int i           -> string_concat_list ["Push "; (push_expr(e)); ";"]
+    | Bool b          -> string_concat_list ["Push "; (push_expr(e)); ";"]
+    | Unit            -> string_concat_list ["Push "; (push_expr(e)); ";"]
     | UOpr (opr, m)   -> (match (opr, m) with 
                           | (Neg, m) -> string_concat_list [compiler_helper(m); "Push -1;"; "Mul;"]
                           | (Not, Bool true) -> "Push False;"
