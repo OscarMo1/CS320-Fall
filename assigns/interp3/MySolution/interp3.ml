@@ -331,22 +331,34 @@ let parse_prog (s : string) : expr =
 
 (* compile helper functions *)
 
-let rec str_of_nat (n : int) : string =
-  let d = n mod 10 in 
-  let n0 = n / 10 in
-  let s = str (chr (d + ord '0')) in 
-  if 0 < n0 then
-    string_append (str_of_nat n0) s
-  else s
-let str_of_int (n : int) : string = 
-  if n < 0 then
-    string_append "-" (str_of_nat (-n))
-  else str_of_nat n
+let int2str(i0: int): string =
+   (*get_digit returns the individual digit at specified index of number*)
+   let getDigit(x: int): int =
+   let rec getDigitHelper(x: int)(result: int): int =
+      if x = 0 then result
+      else getDigitHelper (x - 1) (result * 10)
+   in
+   getDigitHelper x 1 in
+      
+   let length = num_length (abs i0) in
+   let isNeg = i0 < 0 in
+   (*create string with length based on length and isNeg*)
+   string_init (length + (if isNeg then 1 else 0))
+   (* lambda function that calls index of the value of int and turns into string*)
+   (fun i -> 
+      if i = 0 && isNeg then '-'
+      else
+         let index = length - (if isNeg then (i - 1) else i) - 1 in
+         let digit = abs (i0 / getDigit index) mod 10
+      in
+      chr(ord '0' + digit)
+      );;
+
 
 let compile (s : string) : string = (* YOUR CODE *)
   let push_expr(expr): string = 
     match expr with
-    | Int n -> str_of_int n
+    | Int n -> int2str n
     | Bool b -> if b then "True" else "False"
     | Var s -> s
     | Unit -> "Unit"
